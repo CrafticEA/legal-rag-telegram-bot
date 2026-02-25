@@ -30,6 +30,9 @@ services:
   llm:
     build: ./llm
     container_name: legal_llm
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
     ports:
       - "8002:8000"
     volumes:
@@ -37,11 +40,6 @@ services:
       - ./data/hf_cache:/root/.cache/huggingface
     env_file:
       - .env
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
     restart: unless-stopped
 
   n8n:
