@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+
+  api:
+    build: ./api
+    container_name: legal_api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    depends_on:
+      - rag
+      - llm
+    restart: unless-stopped
+
+  rag:
+    build: ./rag
+    container_name: legal_rag
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  llm:
+    build: ./llm
+    container_name: legal_llm
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./data:/app/data
+      - ./data/hf_cache:/root/.cache/huggingface
+    env_file:
+      - .env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    restart: unless-stopped
+
+  n8n:
+    image: n8nio/n8n
+    container_name: legal_n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+    volumes:
+      - ./n8n:/home/node/.n8n
+    restart: unless-stopped
