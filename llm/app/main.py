@@ -2,7 +2,13 @@ import time
 
 from fastapi import FastAPI, HTTPException
 
-from app.model_client import DMR_BASE_URL, DMR_MODEL, ModelClientError, generate_chat_completion, get_models
+from app.model_client import (
+    DMR_BASE_URL,
+    DMR_MODEL,
+    ModelClientError,
+    generate_chat_completion,
+    get_models,
+)
 from app.prompt_builder import build_system_prompt, build_user_prompt
 from app.schemas import GenerateRequest, GenerateResponse, SourceItem
 
@@ -32,7 +38,7 @@ def status() -> dict:
 @app.post("/generate", response_model=GenerateResponse)
 def generate(req: GenerateRequest) -> GenerateResponse:
     if not req.context.chunks:
-        raise HTTPException(status_code=400, detail="Context chunks are empty.")
+        raise HTTPException(status_code=400, detail="context chunks are empty")
 
     system_prompt = build_system_prompt(req.instructions)
     user_prompt = build_user_prompt(req.query, req.context.chunks)

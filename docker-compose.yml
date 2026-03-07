@@ -1,7 +1,6 @@
 version: "3.9"
 
 services:
-
   api:
     build: ./api
     container_name: legal_api
@@ -22,55 +21,32 @@ services:
       "
     depends_on:
       - api-db
-#      - rag
-#      - llm
+      - llm
     restart: unless-stopped
 
   api-db:
     image: postgres:17
+    container_name: legal_api_db
     volumes:
       - postgres_db:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-
-#  rag:
-#    build: ./rag
-#    container_name: legal_rag
-#    ports:
-#      - "8001:8000"
-#    volumes:
-#      - ./data:/app/data
-#    env_file:
-#      - .env
-#    restart: unless-stopped
-#
+    restart: unless-stopped
 
   llm:
-      build: ./llm
-      container_name: legal_llm
-      ports:
-        - "8002:8000"
-      environment:
-        DMR_BASE_URL: http://model-runner.docker.internal:12434/v1
-        DMR_MODEL: hf.co/Qwen/Qwen3.5-4B
-        DMR_TIMEOUT_SECONDS: 120
-      extra_hosts:
-        - "model-runner.docker.internal:host-gateway"
-      restart: unless-stopped
-#
-#  n8n:
-#    image: n8nio/n8n
-#    container_name: legal_n8n
-#    ports:
-#      - "5678:5678"
-#    environment:
-#      - N8N_HOST=localhost
-#      - N8N_PORT=5678
-#      - N8N_PROTOCOL=http
-#    volumes:
-#      - ./n8n:/home/node/.n8n
-#    restart: unless-stopped
+    build: ./llm
+    container_name: legal_llm
+    ports:
+      - "8002:8002"
+    environment:
+      DMR_BASE_URL: http://model-runner.docker.internal:12434/engines/v1
+      # DMR_MODEL: huggingface.co/qwen/qwen3.5-4b:latest
+      DMR_MODEL: docker.io/ai/qwen2.5:latest
+      DMR_TIMEOUT_SECONDS: 120
+    extra_hosts:
+      - "model-runner.docker.internal:host-gateway"
+    restart: unless-stopped
 
 volumes:
   postgres_db:
