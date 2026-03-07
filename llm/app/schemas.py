@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -31,6 +31,27 @@ class GenerateRequest(BaseModel):
     case_id: str
     query: str
     context: Context
+    instructions: Instructions = Field(default_factory=Instructions)
+    generation: GenerationParams = Field(default_factory=GenerationParams)
+
+
+class RecommendationContext(BaseModel):
+    case_summary: Optional[str] = None
+    goal: Optional[str] = None
+    facts: List[str] = Field(default_factory=list)
+    claimant_position: Optional[str] = None
+    respondent_position: Optional[str] = None
+    risks: List[str] = Field(default_factory=list)
+    missing_info: List[str] = Field(default_factory=list)
+    procedural_stage: Optional[str] = None
+    requested_output: Optional[str] = None
+    chunks: List[Chunk] = Field(default_factory=list)
+    extra: dict[str, Any] = Field(default_factory=dict)
+
+
+class RecommendationRequest(BaseModel):
+    case_id: str
+    context: RecommendationContext
     instructions: Instructions = Field(default_factory=Instructions)
     generation: GenerationParams = Field(default_factory=GenerationParams)
 

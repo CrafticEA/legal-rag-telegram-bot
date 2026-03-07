@@ -9,10 +9,33 @@ from app.model_client import (
     generate_chat_completion,
     get_models,
 )
-from app.prompt_builder import build_system_prompt, build_user_prompt
-from app.schemas import GenerateRequest, GenerateResponse, SourceItem
+from app.prompt_builder import (
+    build_generate_system_prompt,
+    build_generate_user_prompt,
+    build_recommendation_system_prompt,
+    build_recommendation_user_prompt,
+)
+from app.schemas import (
+    GenerateRequest,
+    GenerateResponse,
+    RecommendationRequest,
+    SourceItem,
+)
 
-app = FastAPI(title="Legal LLM Service", version="0.1.0")
+app = FastAPI(title="Legal LLM Service", version="0.2.0")
+
+
+def _collect_sources(chunks) -> list[SourceItem]:
+    unique = {}
+    for chunk in chunks:
+        key = (chunk.source, chunk.page, chunk.chunk_id)
+        if key not in unique:
+            unique[key] = SourceItem(
+                source=chunk.source,
+                page=chunk.page,
+                chunk_id=chunk.chunk_id,
+            )
+    return list(unique.values())
 
 
 @app.get("/status")
@@ -40,8 +63,8 @@ def generate(req: GenerateRequest) -> GenerateResponse:
     if not req.context.chunks:
         raise HTTPException(status_code=400, detail="context chunks are empty")
 
-    system_prompt = build_system_prompt(req.instructions)
-    user_prompt = build_user_prompt(req.query, req.context.chunks)
+    system_prompt = build_generate_system_prompt(req.instructions)
+    user_prompt = build_generate_user_prompt(req.query, req.context.chunks)
 
     started_at = time.perf_counter()
 
@@ -57,12 +80,7 @@ def generate(req: GenerateRequest) -> GenerateResponse:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     elapsed = time.perf_counter() - started_at
-
-    sources = [
-        SourceItem(source=chunk.source, page=chunk.page, chunk_id=chunk.chunk_id)
-        for chunk in req.context.chunks
-    ]
-
+    sources = _collect_sources(req.context.chunks)
     raw = result["raw"]
     usage = raw.get("usage", {})
 
@@ -70,10 +88,54 @@ def generate(req: GenerateRequest) -> GenerateResponse:
         answer=result["content"],
         sources=sources,
         meta={
+            "mode": "generate",
             "case_id": req.case_id,
             "model": DMR_MODEL,
             "generation_time_sec": round(elapsed, 3),
             "usage": usage,
             "chunks_count": len(req.context.chunks),
+        },
+    )
+
+
+@app.post("/recommendations", response_model=GenerateResponse)
+def recommendations(req: RecommendationRequest) -> GenerateResponse:
+    if not req.context.chunks:
+        raise HTTPException(status_code=400, detail="recommendation context chunks are empty")
+
+    system_prompt = build_recommendation_system_prompt(req.instructions)
+    user_prompt = build_recommendation_user_prompt(req.context)
+
+    started_at = time.perf_counter()
+
+    try:
+        result = generate_chat_completion(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            temperature=req.generation.temperature,
+            max_tokens=req.generation.max_tokens,
+            enable_thinking=req.generation.enable_thinking,
+        )
+    except ModelClientError as e:
+        raise HTTPException(status_code=502, detail=str(e)) from e
+
+    elapsed = time.perf_counter() - started_at
+    sources = _collect_sources(req.context.chunks)
+    raw = result["raw"]
+    usage = raw.get("usage", {})
+
+    return GenerateResponse(
+        answer=result["content"],
+        sources=sources,
+        meta={
+            "mode": "recommendations",
+            "case_id": req.case_id,
+            "model": DMR_MODEL,
+            "generation_time_sec": round(elapsed, 3),
+            "usage": usage,
+            "chunks_count": len(req.context.chunks),
+            "facts_count": len(req.context.facts),
+            "risks_count": len(req.context.risks),
+            "missing_info_count": len(req.context.missing_info),
         },
     )

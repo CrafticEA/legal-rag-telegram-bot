@@ -4,11 +4,7 @@ from typing import Any
 import requests
 
 DMR_BASE_URL = os.getenv("DMR_BASE_URL", "http://model-runner.docker.internal:12434/engines/v1")
-# DMR_MODEL = os.getenv("DMR_MODEL", "ai/smollm2")
-DMR_MODEL = os.getenv(
-    "DMR_MODEL",
-    "huggingface.co/qwen/qwen3.5-4b"
-)
+DMR_MODEL = os.getenv("DMR_MODEL", "docker.io/ai/qwen2.5:latest")
 REQUEST_TIMEOUT = int(os.getenv("DMR_TIMEOUT_SECONDS", "120"))
 
 
@@ -47,6 +43,8 @@ def generate_chat_completion(
         "max_tokens": max_tokens,
         "stream": False,
     }
+
+    _ = enable_thinking
 
     try:
         resp = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
