@@ -45,20 +45,19 @@ services:
 #      - .env
 #    restart: unless-stopped
 #
-#  llm:
-#    build: ./llm
-#    container_name: legal_llm
-#    runtime: nvidia
-#    environment:
-#      - NVIDIA_VISIBLE_DEVICES=all
-#    ports:
-#      - "8002:8000"
-#    volumes:
-#      - ./data:/app/data
-#      - ./data/hf_cache:/root/.cache/huggingface
-#    env_file:
-#      - .env
-#    restart: unless-stopped
+
+  llm:
+      build: ./llm
+      container_name: legal_llm
+      ports:
+        - "8002:8000"
+      environment:
+        DMR_BASE_URL: http://model-runner.docker.internal:12434/v1
+        DMR_MODEL: hf.co/Qwen/Qwen3.5-4B
+        DMR_TIMEOUT_SECONDS: 120
+      extra_hosts:
+        - "model-runner.docker.internal:host-gateway"
+      restart: unless-stopped
 #
 #  n8n:
 #    image: n8nio/n8n
