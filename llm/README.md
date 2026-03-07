@@ -1,18 +1,205 @@
-# LLM Service
+# Legal LLM Service
 
-Inference service for text generation.
+LLM-сервис для проекта legal-rag-telegram-bot.
 
-## Responsibilities
+Сервис отвечает за генерацию ответов на основе контекста,
+подготовленного RAG-модулем, и работает через локальную модель в Docker
+Model Runner.
 
-- Load Mistral/Ministral model (4-bit)
-- Accept question + context
-- Generate structured legal recommendations
-- Return formatted answer
+Поддерживаются два режима работы:
 
-## GPU
+-   POST /generate --- ответ на пользовательский вопрос по найденным
+    фрагментам документов
+-   POST /recommendations --- генерация рекомендаций по заранее
+    подготовленному prompt_context.json
 
-Requires NVIDIA GPU.
+------------------------------------------------------------------------
 
-## Exposed Port
+## Стек
 
-8002
+-   FastAPI
+-   Uvicorn
+-   Docker Compose
+-   Docker Model Runner
+-   llama.cpp backend
+-   локальная LLM (Qwen)
+
+------------------------------------------------------------------------
+
+## Роль сервиса в системе
+
+Общая схема:
+
+User / Telegram / API\
+↓\
+RAG\
+↓\
+JSON request body\
+↓\
+Legal LLM Service\
+↓\
+Docker Model Runner\
+↓\
+Local LLM
+
+Сервис не занимается:
+
+-   парсингом документов
+-   chunking
+-   embeddings
+-   retrieval
+-   построением FAISS индекса
+
+Этим занимается RAG.
+
+LLM-сервис принимает уже готовый JSON-контекст и генерирует итоговый
+ответ.
+
+------------------------------------------------------------------------
+
+# Поддерживаемые сценарии
+
+## 1. Вопрос пользователя
+
+Endpoint:
+
+POST /generate
+
+Сценарий:
+
+1.  пользователь задаёт вопрос
+2.  RAG ищет релевантные chunks
+3.  API формирует JSON
+4.  LLM отвечает по контексту
+
+------------------------------------------------------------------------
+
+## 2. Рекомендации по делу
+
+Endpoint:
+
+POST /recommendations
+
+Сценарий:
+
+1.  документы загружаются в дело
+2.  RAG строит индекс
+3.  RAG формирует prompt_context.json
+4.  пользователь нажимает кнопку «Рекомендации»
+5.  API читает prompt_context.json
+6.  JSON отправляется в LLM сервис
+7.  LLM генерирует рекомендации
+
+------------------------------------------------------------------------
+
+# Структура модуля
+
+llm/ ├─ app/ │ ├─ main.py │ ├─ model_client.py │ ├─ prompt_builder.py │
+└─ schemas.py ├─ Dockerfile ├─ requirements.txt └─ README.md
+
+------------------------------------------------------------------------
+
+# Переменные окружения
+
+DMR_BASE_URL=http://model-runner.docker.internal:12434/engines/v1\
+DMR_MODEL=docker.io/ai/qwen2.5:latest\
+DMR_TIMEOUT_SECONDS=120
+
+Описание:
+
+DMR_BASE_URL --- адрес Docker Model Runner\
+DMR_MODEL --- модель по умолчанию\
+DMR_TIMEOUT_SECONDS --- timeout запроса
+
+------------------------------------------------------------------------
+
+# API
+
+## GET /status
+
+Проверка состояния сервиса.
+
+Пример ответа:
+
+{ "status": "ok", "dmr_base_url": "...", "model_configured": "...",
+"available_models": \[\] }
+
+------------------------------------------------------------------------
+
+# POST /generate
+
+Ответ на вопрос пользователя по chunks, найденным RAG.
+
+Пример запроса:
+
+{ "case_id": "case-001", "query": "Какие риски есть в договоре аренды?",
+"context": { "chunks": \[ { "text": "Арендатор обязан платить аренду
+ежемесячно.", "source": "lease_contract.pdf", "page": 3, "chunk_id":
+"chunk-11", "score": 0.91 } \] } }
+
+------------------------------------------------------------------------
+
+# POST /recommendations
+
+Генерация рекомендаций по делу.
+
+JSON формируется RAG после загрузки документов.
+
+Файл хранится:
+
+case_id/ ├ documents/ ├ embeddings/ ├ index/ ├ chunks.jsonl └
+prompt_context.json
+
+API читает prompt_context.json и отправляет его в LLM.
+
+------------------------------------------------------------------------
+
+# Требования к chunks
+
+Каждый chunk:
+
+{ "text": "...", "source": "...", "page": 0, "chunk_id": "...", "score":
+0.0 }
+
+Обязательные поля:
+
+text\
+source
+
+Опциональные:
+
+page\
+chunk_id\
+score
+
+------------------------------------------------------------------------
+
+# Рекомендации по параметрам
+
+chunks: 3--10\
+chunk_size: \~1500 символов\
+overlap: \~200\
+top_k: 5--8
+
+------------------------------------------------------------------------
+
+# Проверка
+
+Пересборка:
+
+docker compose build llm
+
+Запуск:
+
+docker compose up -d llm
+
+Swagger:
+
+http://localhost:8002/docs
+
+------------------------------------------------------------------------
+
+# Назначение сервиса
+
+LLM слой проекта, который предоставляет HTTP API для генерации ответов
+на основе данных, подготовленных RAG.
