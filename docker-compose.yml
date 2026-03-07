@@ -22,6 +22,8 @@ services:
     depends_on:
       - api-db
       - llm
+      # - rag
+      # - n8n
     restart: unless-stopped
 
   api-db:
@@ -47,6 +49,30 @@ services:
     extra_hosts:
       - "model-runner.docker.internal:host-gateway"
     restart: unless-stopped
+
+    #  n8n:
+#    image: n8nio/n8n
+#    container_name: legal_n8n
+#    ports:
+#      - "5678:5678"
+#    environment:
+#      - N8N_HOST=localhost
+#      - N8N_PORT=5678
+#      - N8N_PROTOCOL=http
+#    volumes:
+#      - ./n8n:/home/node/.n8n
+#    restart: unless-stopped
+
+#  rag:
+#    build: ./rag
+#    container_name: legal_rag
+#    ports:
+#      - "8001:8000"
+#    volumes:
+#      - ./data:/app/data
+#    env_file:
+#      - .env
+#    restart: unless-stopped
 
 volumes:
   postgres_db:
