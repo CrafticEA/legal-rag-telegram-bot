@@ -1,115 +1,220 @@
 # Legal LLM Service
 
-LLM-сервис для проекта legal-rag-telegram-bot.
-
+LLM‑сервис для проекта **legal‑rag‑telegram‑bot**.\
 Сервис отвечает за генерацию ответов на основе контекста,
-подготовленного RAG-модулем, и работает через локальную модель в Docker
-Model Runner.
+подготовленного RAG‑модулем, и работает через локальную модель в
+**Docker Model Runner**.
 
 Поддерживаются два режима работы:
 
--   POST /generate --- ответ на пользовательский вопрос по найденным
+-   **POST /generate** --- ответ на пользовательский вопрос по найденным
     фрагментам документов
--   POST /recommendations --- генерация рекомендаций по заранее
-    подготовленному prompt_context.json
+-   **POST /recommendations** --- генерация рекомендаций по заранее
+    подготовленному `prompt_context.json`
 
 ------------------------------------------------------------------------
 
-## Стек
+# Технологический стек
 
--   FastAPI
--   Uvicorn
--   Docker Compose
--   Docker Model Runner
--   llama.cpp backend
--   локальная LLM (Qwen)
+-   **FastAPI**
+-   **Uvicorn**
+-   **Docker**
+-   **Docker Compose**
+-   **Docker Model Runner**
+-   **llama.cpp backend**
+-   **Qwen LLM (локально)**
 
 ------------------------------------------------------------------------
 
-## Роль сервиса в системе
+# Роль сервиса в архитектуре
 
-Общая схема:
+    User / Telegram / API
+            │
+            ▼
+            RAG
+            │
+            ▼
+       JSON Request
+            │
+            ▼
+     Legal LLM Service
+            │
+            ▼
+     Docker Model Runner
+            │
+            ▼
+          Local LLM
 
-User / Telegram / API\
-↓\
-RAG\
-↓\
-JSON request body\
-↓\
-Legal LLM Service\
-↓\
-Docker Model Runner\
-↓\
-Local LLM
+LLM‑сервис **не выполняет**:
 
-Сервис не занимается:
-
--   парсингом документов
+-   parsing документов
 -   chunking
 -   embeddings
 -   retrieval
--   построением FAISS индекса
+-   построение FAISS индекса
 
-Этим занимается RAG.
+Все эти операции выполняет **RAG‑модуль**.
 
-LLM-сервис принимает уже готовый JSON-контекст и генерирует итоговый
+LLM‑сервис получает **готовый JSON‑контекст** и генерирует финальный
 ответ.
 
 ------------------------------------------------------------------------
 
 # Поддерживаемые сценарии
 
-## 1. Вопрос пользователя
+## 1. Ответ на вопрос пользователя
 
 Endpoint:
 
-POST /generate
+    POST /generate
 
-Сценарий:
+Pipeline:
 
-1.  пользователь задаёт вопрос
-2.  RAG ищет релевантные chunks
-3.  API формирует JSON
-4.  LLM отвечает по контексту
+    User question
+         │
+         ▼
+    RAG retrieve(query)
+         │
+         ▼
+    top_k chunks
+         │
+         ▼
+    POST /generate
+         │
+         ▼
+    LLM response
 
 ------------------------------------------------------------------------
 
-## 2. Рекомендации по делу
+## 2. Генерация рекомендаций по делу
 
 Endpoint:
 
-POST /recommendations
+    POST /recommendations
 
-Сценарий:
+Pipeline:
 
-1.  документы загружаются в дело
-2.  RAG строит индекс
-3.  RAG формирует prompt_context.json
-4.  пользователь нажимает кнопку «Рекомендации»
-5.  API читает prompt_context.json
-6.  JSON отправляется в LLM сервис
-7.  LLM генерирует рекомендации
+    Documents uploaded
+            │
+            ▼
+    Parsing → Chunking → Embeddings
+            │
+            ▼
+    Index build (FAISS)
+            │
+            ▼
+    Generate prompt_context.json
+            │
+            ▼
+    User presses "Recommendations"
+            │
+            ▼
+    POST /recommendations
+            │
+            ▼
+    LLM response
 
 ------------------------------------------------------------------------
 
 # Структура модуля
 
-llm/ ├─ app/ │ ├─ main.py │ ├─ model_client.py │ ├─ prompt_builder.py │
-└─ schemas.py ├─ Dockerfile ├─ requirements.txt └─ README.md
+    llm/
+    ├── app/
+    │   ├── main.py
+    │   ├── model_client.py
+    │   ├── prompt_builder.py
+    │   └── schemas.py
+    │
+    ├── Dockerfile
+    ├── requirements.txt
+    └── README.md
+
+------------------------------------------------------------------------
+
+# Описание модулей
+
+## main.py
+
+Основное FastAPI приложение.
+
+Endpoints:
+
+-   `GET /status`
+-   `POST /generate`
+-   `POST /recommendations`
+
+------------------------------------------------------------------------
+
+## model_client.py
+
+Клиент для взаимодействия с **Docker Model Runner** через
+OpenAI‑совместимый API.
+
+Основные функции:
+
+-   получение списка доступных моделей
+-   отправка chat completion запроса
+-   обработка ошибок LLM
+
+------------------------------------------------------------------------
+
+## prompt_builder.py
+
+Генерация prompt для модели.
+
+Реализует:
+
+-   system prompt
+-   user prompt
+-   форматирование chunks
+-   подготовку prompt для рекомендаций
+
+------------------------------------------------------------------------
+
+## schemas.py
+
+Pydantic схемы API.
+
+Основные модели:
+
+-   `GenerateRequest`
+-   `RecommendationRequest`
+-   `GenerateResponse`
+-   `Chunk`
+-   `SourceItem`
 
 ------------------------------------------------------------------------
 
 # Переменные окружения
 
-DMR_BASE_URL=http://model-runner.docker.internal:12434/engines/v1\
-DMR_MODEL=docker.io/ai/qwen2.5:latest\
-DMR_TIMEOUT_SECONDS=120
+    DMR_BASE_URL=http://model-runner.docker.internal:12434/engines/v1
+    DMR_MODEL=docker.io/ai/qwen2.5:latest
+    DMR_TIMEOUT_SECONDS=120
 
-Описание:
+  Переменная            Назначение
+  --------------------- ---------------------------
+  DMR_BASE_URL          адрес Docker Model Runner
+  DMR_MODEL             модель по умолчанию
+  DMR_TIMEOUT_SECONDS   timeout запроса к модели
 
-DMR_BASE_URL --- адрес Docker Model Runner\
-DMR_MODEL --- модель по умолчанию\
-DMR_TIMEOUT_SECONDS --- timeout запроса
+------------------------------------------------------------------------
+
+# Docker Compose пример
+
+``` yaml
+llm:
+  build: ./llm
+  container_name: legal_llm
+  ports:
+    - "8002:8002"
+  environment:
+    DMR_BASE_URL: http://model-runner.docker.internal:12434/engines/v1
+    DMR_MODEL: docker.io/ai/qwen2.5:latest
+    DMR_TIMEOUT_SECONDS: 120
+  extra_hosts:
+    - "model-runner.docker.internal:host-gateway"
+  restart: unless-stopped
+```
 
 ------------------------------------------------------------------------
 
@@ -119,10 +224,18 @@ DMR_TIMEOUT_SECONDS --- timeout запроса
 
 Проверка состояния сервиса.
 
-Пример ответа:
+### Пример ответа
 
-{ "status": "ok", "dmr_base_url": "...", "model_configured": "...",
-"available_models": \[\] }
+``` json
+{
+  "status": "ok",
+  "dmr_base_url": "http://model-runner.docker.internal:12434/engines/v1",
+  "model_configured": "docker.io/ai/qwen2.5:latest",
+  "available_models": [
+    "docker.io/ai/qwen2.5:latest"
+  ]
+}
+```
 
 ------------------------------------------------------------------------
 
@@ -130,12 +243,68 @@ DMR_TIMEOUT_SECONDS --- timeout запроса
 
 Ответ на вопрос пользователя по chunks, найденным RAG.
 
-Пример запроса:
+### Пример запроса
 
-{ "case_id": "case-001", "query": "Какие риски есть в договоре аренды?",
-"context": { "chunks": \[ { "text": "Арендатор обязан платить аренду
-ежемесячно.", "source": "lease_contract.pdf", "page": 3, "chunk_id":
-"chunk-11", "score": 0.91 } \] } }
+``` json
+{
+  "case_id": "case-001",
+  "query": "Какие риски есть в договоре аренды?",
+  "context": {
+    "chunks": [
+      {
+        "text": "Арендатор обязан вносить арендную плату не позднее 5 числа каждого месяца.",
+        "source": "lease_contract.pdf",
+        "page": 3,
+        "chunk_id": "chunk-11",
+        "score": 0.91
+      },
+      {
+        "text": "При просрочке оплаты более 10 дней арендодатель вправе расторгнуть договор.",
+        "source": "lease_contract.pdf",
+        "page": 5,
+        "chunk_id": "chunk-19",
+        "score": 0.89
+      }
+    ]
+  },
+  "instructions": {
+    "answer_only_from_context": true,
+    "cite_sources": true,
+    "structured_output": true
+  },
+  "generation": {
+    "temperature": 0.2,
+    "max_tokens": 250,
+    "enable_thinking": false
+  }
+}
+```
+
+### Пример ответа
+
+``` json
+{
+  "answer": "Существует риск расторжения договора аренды при длительной просрочке оплаты. Также возможен риск взыскания задолженности.",
+  "sources": [
+    {
+      "source": "lease_contract.pdf",
+      "page": 3,
+      "chunk_id": "chunk-11"
+    },
+    {
+      "source": "lease_contract.pdf",
+      "page": 5,
+      "chunk_id": "chunk-19"
+    }
+  ],
+  "meta": {
+    "mode": "generate",
+    "case_id": "case-001",
+    "model": "docker.io/ai/qwen2.5:latest",
+    "generation_time_sec": 1.24
+  }
+}
+```
 
 ------------------------------------------------------------------------
 
@@ -143,63 +312,118 @@ DMR_TIMEOUT_SECONDS --- timeout запроса
 
 Генерация рекомендаций по делу.
 
-JSON формируется RAG после загрузки документов.
+JSON формируется **RAG после загрузки документов**.
 
-Файл хранится:
+Файл хранится внутри дела:
 
-case_id/ ├ documents/ ├ embeddings/ ├ index/ ├ chunks.jsonl └
-prompt_context.json
+    case_id/
+    ├── documents/
+    ├── embeddings/
+    ├── index/
+    ├── chunks.jsonl
+    └── prompt_context.json
 
-API читает prompt_context.json и отправляет его в LLM.
+### Пример запроса
+
+``` json
+{
+  "case_id": "case-001",
+  "context": {
+    "case_summary": "Спор связан с просрочкой арендных платежей.",
+    "goal": "Подготовить рекомендации для юриста.",
+    "procedural_stage": "досудебная стадия",
+    "requested_output": "Сформулировать практические рекомендации.",
+    "facts": [
+      "Заключен договор аренды",
+      "Есть просрочка платежей"
+    ],
+    "claimant_position": "Арендодатель может расторгнуть договор.",
+    "respondent_position": "Арендатор хочет сохранить договор.",
+    "risks": [
+      "Расторжение договора",
+      "Взыскание задолженности"
+    ],
+    "missing_info": [
+      "Неизвестна точная сумма задолженности",
+      "Нет данных о переписке сторон"
+    ],
+    "chunks": [
+      {
+        "text": "Арендатор обязан платить аренду ежемесячно.",
+        "source": "lease_contract.pdf",
+        "page": 3,
+        "chunk_id": "chunk-11",
+        "score": 0.91
+      }
+    ]
+  }
+}
+```
 
 ------------------------------------------------------------------------
 
 # Требования к chunks
 
-Каждый chunk:
+``` json
+{
+  "text": "string",
+  "source": "string",
+  "page": 0,
+  "chunk_id": "string",
+  "score": 0.0
+}
+```
 
-{ "text": "...", "source": "...", "page": 0, "chunk_id": "...", "score":
-0.0 }
-
-Обязательные поля:
-
-text\
-source
-
-Опциональные:
-
-page\
-chunk_id\
-score
-
-------------------------------------------------------------------------
-
-# Рекомендации по параметрам
-
-chunks: 3--10\
-chunk_size: \~1500 символов\
-overlap: \~200\
-top_k: 5--8
+  Поле       Обязательное
+  ---------- --------------
+  text       да
+  source     да
+  page       нет
+  chunk_id   нет
+  score      нет
 
 ------------------------------------------------------------------------
 
-# Проверка
+# Рекомендуемые параметры RAG
 
-Пересборка:
+  Параметр             Значение
+  -------------------- -----------------
+  chunks per request   3‑10
+  chunk_size           \~1500 символов
+  overlap              \~200
+  top_k                5‑8
 
-docker compose build llm
+------------------------------------------------------------------------
 
-Запуск:
+# Запуск
 
-docker compose up -d llm
+## Сборка контейнера
 
-Swagger:
+    docker compose build llm
 
-http://localhost:8002/docs
+## Запуск
+
+    docker compose up -d llm
+
+## Проверка логов
+
+    docker logs -f legal_llm
+
+------------------------------------------------------------------------
+
+# Swagger
+
+Документация API:
+
+    http://localhost:8002/docs
+
+OpenAPI schema:
+
+    http://localhost:8002/openapi.json
 
 ------------------------------------------------------------------------
 
 # Назначение сервиса
 
-LLM слой проекта, который предоставляет HTTP API для генерации ответов
-на основе данных, подготовленных RAG.
+Этот модуль является **LLM‑слоем системы** и предоставляет единый HTTP
+API для генерации ответов поверх данных, подготовленных RAG.
