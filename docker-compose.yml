@@ -42,9 +42,8 @@ services:
     ports:
       - "8002:8002"
     environment:
-      DMR_BASE_URL: http://model-runner.docker.internal:12434/engines/v1
-      # DMR_MODEL: huggingface.co/qwen/qwen3.5-4b:latest
-      DMR_MODEL: docker.io/ai/qwen2.5:latest
+      DMR_BASE_URL: http://model-runner.docker.internal:12434/v1
+      DMR_MODEL: hf.co/Qwen/Qwen2.5-7B-Instruct-GGUF:Q4_K_M
       DMR_TIMEOUT_SECONDS: 120
     extra_hosts:
       - "model-runner.docker.internal:host-gateway"
