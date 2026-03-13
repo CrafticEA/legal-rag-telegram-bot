@@ -3,7 +3,10 @@ class Document < ApplicationRecord
   belongs_to :case
 
   def file_url
-    file&.url&.to_s ? "#{Services.website.host}#{file.url}" : nil
+    return nil unless file&.url
+
+    host = Services.website&.host
+    host ? "#{host}#{file.url}" : file.url.to_s
   end
 
   def doc_id
