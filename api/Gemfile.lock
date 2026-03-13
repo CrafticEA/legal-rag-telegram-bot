@@ -88,6 +88,7 @@ GEM
     content_disposition (1.0.0)
     crass (1.0.6)
     date (3.5.1)
+    diff-lcs (1.6.2)
     dotenv (3.2.0)
     down (5.4.2)
       addressable (~> 2.8)
@@ -97,6 +98,11 @@ GEM
     erubi (1.13.1)
     et-orbi (1.4.0)
       tzinfo
+    factory_bot (6.5.6)
+      activesupport (>= 6.1.0)
+    factory_bot_rails (6.5.1)
+      factory_bot (~> 6.5)
+      railties (>= 6.1.0)
     fugit (1.12.1)
       et-orbi (~> 1.4)
       raabro (~> 1.4)
@@ -240,6 +246,23 @@ GEM
       tsort
     reline (0.6.3)
       io-console (~> 0.5)
+    rspec-core (3.13.6)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.8)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-rails (7.1.1)
+      actionpack (>= 7.0)
+      activesupport (>= 7.0)
+      railties (>= 7.0)
+      rspec-core (~> 3.13)
+      rspec-expectations (~> 3.13)
+      rspec-mocks (~> 3.13)
+      rspec-support (~> 3.13)
+    rspec-support (3.13.7)
     securerandom (0.4.1)
     shrine (3.6.0)
       content_disposition (~> 1.0)
@@ -295,12 +318,14 @@ PLATFORMS
 
 DEPENDENCIES
   bootsnap
+  factory_bot_rails
   jbuilder
   kamal
   pg
   puma
   rails (~> 8.0.2)
   ransack
+  rspec-rails (~> 7.0)
   shrine
   solid_cable
   solid_cache

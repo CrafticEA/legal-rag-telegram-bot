@@ -1,9 +1,19 @@
 # Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
 
 one:
-  chat_id: MyString
-  status: MyString
+  chat_id: "123456789"
+  status: READY
+  title: "Первое дело"
+  progress: 100
 
 two:
-  chat_id: MyString
-  status: MyString
+  chat_id: "123456789"
+  status: EMPTY
+  title: "Второе дело"
+  progress: 0
+
+other_chat:
+  chat_id: "987654321"
+  status: READY
+  title: "Чужое дело"
+  progress: 100
