@@ -1,0 +1,20 @@
+# Работа с PDF/DOCX/TXT
+pypdf>=3.10
+python-docx>=0.8.11
+
+# FastAPI (если планируешь main.py)
+fastapi>=0.103
+uvicorn[standard]>=0.23
+
+# FAISS
+faiss-cpu>=1.7.4  # или faiss-gpu, если будет GPU
+
+# Sentence Transformers (E5)
+sentence-transformers>=2.2.2
+torch>=2.1.0
+
+# Transformers для reranker
+transformers>=4.35.0
+
+# Общие утилиты
+numpy>=1.26.0
