@@ -22,7 +22,7 @@ services:
     depends_on:
       - api-db
       - llm
-      # - rag
+      - rag
       - n8n
     restart: unless-stopped
 
@@ -74,16 +74,15 @@ services:
 
     restart: unless-stopped
 
-#  rag:
-#    build: ./rag
-#    container_name: legal_rag
-#    ports:
-#      - "8001:8000"
-#    volumes:
-#      - ./data:/app/data
-#    env_file:
-#      - .env
-#    restart: unless-stopped
+  rag:
+    build: ./rag
+    container_name: legal_rag
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    restart: unless-stopped
 
 volumes:
   postgres_db:

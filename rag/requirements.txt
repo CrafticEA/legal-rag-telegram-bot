@@ -1,20 +1,15 @@
-# Работа с PDF/DOCX/TXT
-pypdf>=3.10
-python-docx>=0.8.11
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+pydantic==2.11.7
 
-# FastAPI (если планируешь main.py)
-fastapi>=0.103
-uvicorn[standard]>=0.23
+pypdf==4.3.1
+python-docx==1.1.2
 
-# FAISS
-faiss-cpu>=1.7.4  # или faiss-gpu, если будет GPU
+faiss-cpu==1.7.4
 
-# Sentence Transformers (E5)
-sentence-transformers>=2.2.2
-torch>=2.1.0
+sentence-transformers==3.0.1
+torch==2.3.1
+transformers==4.43.3
+tokenizers==0.19.1
 
-# Transformers для reranker
-transformers>=4.35.0
-
-# Общие утилиты
-numpy>=1.26.0
+numpy==1.26.4

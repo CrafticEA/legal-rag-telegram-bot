@@ -1,4 +1,4 @@
-from app.schemas import Chunk, Instructions, RecommendationContext
+from app.schemas import Chunk, RecommendationContext
 
 
 def _format_chunk(chunk: Chunk, index: int) -> str:
@@ -25,23 +25,27 @@ def _join_chunks(chunks: list[Chunk]) -> str:
     )
 
 
-def build_generate_system_prompt(instructions: Instructions) -> str:
+def build_generate_system_prompt(instructions: dict) -> str:
+    answer_only_from_context = instructions.get("answer_only_from_context", True)
+    cite_sources = instructions.get("cite_sources", True)
+    structured_output = instructions.get("structured_output", True)
+
     rules = [
         "Ты помощник по анализу юридических документов.",
         "Отвечай на русском языке.",
     ]
 
-    if instructions.answer_only_from_context:
+    if answer_only_from_context:
         rules.append(
             "Используй только предоставленный контекст. Если данных недостаточно, прямо скажи об этом."
         )
 
-    if instructions.cite_sources:
+    if cite_sources:
         rules.append(
             "Не вставляй источники в текст ответа. Источники будут добавлены системой отдельно."
         )
 
-    if instructions.structured_output:
+    if structured_output:
         rules.append(
             "Структурируй ответ: сначала краткий вывод, затем детали."
         )
@@ -64,7 +68,7 @@ def build_generate_user_prompt(query: str, chunks: list[Chunk]) -> str:
 """
 
 
-def build_recommendation_system_prompt(instructions: Instructions) -> str:
+def build_recommendation_system_prompt(instructions) -> str:
     rules = [
         "Ты помощник по анализу юридических документов.",
         "Отвечай на русском языке.",

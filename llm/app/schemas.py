@@ -11,7 +11,9 @@ class Chunk(BaseModel):
     score: Optional[float] = None
 
 
-class Context(BaseModel):
+class SimpleGenerateRequest(BaseModel):
+    case_id: Optional[str] = None
+    query: str
     chunks: List[Chunk] = Field(default_factory=list)
 
 
@@ -25,14 +27,6 @@ class GenerationParams(BaseModel):
     temperature: float = 0.1
     max_tokens: int = 700
     enable_thinking: bool = False
-
-
-class GenerateRequest(BaseModel):
-    case_id: str
-    query: str
-    context: Context
-    instructions: Instructions = Field(default_factory=Instructions)
-    generation: GenerationParams = Field(default_factory=GenerationParams)
 
 
 class RecommendationContext(BaseModel):
@@ -65,4 +59,4 @@ class SourceItem(BaseModel):
 class GenerateResponse(BaseModel):
     answer: str
     sources: List[SourceItem]
-    meta: dict
+    meta: dict[str, Any] = Field(default_factory=dict)

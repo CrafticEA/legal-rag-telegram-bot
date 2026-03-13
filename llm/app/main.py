@@ -16,13 +16,13 @@ from app.prompt_builder import (
     build_recommendation_user_prompt,
 )
 from app.schemas import (
-    GenerateRequest,
+    SimpleGenerateRequest,
     GenerateResponse,
     RecommendationRequest,
     SourceItem,
 )
 
-app = FastAPI(title="Legal LLM Service", version="0.2.0")
+app = FastAPI(title="Legal LLM Service", version="0.3.0")
 
 
 def _collect_sources(chunks) -> list[SourceItem]:
@@ -59,12 +59,24 @@ def status() -> dict:
 
 
 @app.post("/generate", response_model=GenerateResponse)
-def generate(req: GenerateRequest) -> GenerateResponse:
-    if not req.context.chunks:
-        raise HTTPException(status_code=400, detail="context chunks are empty")
+def generate(req: SimpleGenerateRequest) -> GenerateResponse:
+    if not req.chunks:
+        raise HTTPException(status_code=400, detail="chunks are empty")
 
-    system_prompt = build_generate_system_prompt(req.instructions)
-    user_prompt = build_generate_user_prompt(req.query, req.context.chunks)
+    instructions = {
+        "answer_only_from_context": True,
+        "cite_sources": True,
+        "structured_output": True,
+    }
+
+    generation = {
+        "temperature": 0.1,
+        "max_tokens": 700,
+        "enable_thinking": False,
+    }
+
+    system_prompt = build_generate_system_prompt(instructions)
+    user_prompt = build_generate_user_prompt(req.query, req.chunks)
 
     started_at = time.perf_counter()
 
@@ -72,15 +84,15 @@ def generate(req: GenerateRequest) -> GenerateResponse:
         result = generate_chat_completion(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            temperature=req.generation.temperature,
-            max_tokens=req.generation.max_tokens,
-            enable_thinking=req.generation.enable_thinking,
+            temperature=generation["temperature"],
+            max_tokens=generation["max_tokens"],
+            enable_thinking=generation["enable_thinking"],
         )
     except ModelClientError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
 
     elapsed = time.perf_counter() - started_at
-    sources = _collect_sources(req.context.chunks)
+    sources = _collect_sources(req.chunks)
     raw = result["raw"]
     usage = raw.get("usage", {})
 
@@ -93,7 +105,7 @@ def generate(req: GenerateRequest) -> GenerateResponse:
             "model": DMR_MODEL,
             "generation_time_sec": round(elapsed, 3),
             "usage": usage,
-            "chunks_count": len(req.context.chunks),
+            "chunks_count": len(req.chunks),
         },
     )
 
