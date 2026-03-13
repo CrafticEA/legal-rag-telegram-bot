@@ -13,12 +13,8 @@ services:
       DATABASE_HOST: api-db
       DATABASE_USER: user
       DATABASE_PASSWORD: password
-    command: >
-      bash -c "
-        bundle exec rails db:create &&
-        bundle exec rails db:migrate &&
-        bundle exec rails s -p 8000 -b 0.0.0.0
-      "
+    command: bash -c "rm -f /app/tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails server -b 0.0.0.0 -p 8000"
+
     depends_on:
       - api-db
       - llm
