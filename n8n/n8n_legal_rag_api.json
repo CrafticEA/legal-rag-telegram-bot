@@ -1,0 +1,1554 @@
+{
+  "name": "legal_rag_telegram_api_current_github_ready",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message",
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "3742afe7-d858-4677-b376-46f039259e35",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1200,
+        -600
+      ],
+      "webhookId": "legal-rag-telegram-api-max",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $json.message || {};\nconst cb = $json.callback_query || {};\nconst doc = msg?.document || null;\n\nreturn [{\n  json: {\n    chat_id: msg?.chat?.id || cb?.message?.chat?.id || null,\n    input_text: (msg?.text || '').trim(),\n    callback_data: cb?.data || '',\n    callback_id: cb?.id || '',\n    telegram_file_id: doc?.file_id || '',\n    telegram_document_name: doc?.file_name || '',\n    telegram_mime_type: doc?.mime_type || '',\n    has_document: !!doc\n  },\n  binary: $binary\n}];"
+      },
+      "id": "2329fc42-48ba-4938-97a7-aca08d956ee0",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nconst state = states[chatId] || {};\n\nreturn [{\n  json: {\n    ...$json,\n    api_base_url: $env.N8N_API_BASE_URL || 'http://api:8000/api',\n    active_case_id: state.active_case_id || '',\n    pending_action: state.pending_action || ''\n  },\n  binary: $binary\n}];"
+      },
+      "id": "a451fc7d-1a55-4af0-a983-81b4ba07e2f9",
+      "name": "Load State",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = ($json.input_text || '').trim();\nconst cb = $json.callback_data || '';\nconst pending = $json.pending_action || '';\nconst hasActive = !!$json.active_case_id;\nconst hasDocument = !!$json.has_document;\n\nlet route = 'UNKNOWN';\nlet selected_case_id = '';\nlet selected_doc_id = '';\n\nif (text === '/start' || text === '/menu' || cb === 'BACK_MAIN') {\n  route = 'START';\n} else if (text === '/new_case' || text === '/newcase' || cb === 'MENU_NEW_CASE') {\n  route = 'NEW_CASE';\n} else if (pending === 'waiting_case_title' && text && !text.startsWith('/')) {\n  route = 'SUBMIT_NEW_CASE';\n} else if (text === '/list_cases' || text === '/listcases' || cb === 'MENU_LIST_CASES' || cb === 'CASE_LIST') {\n  route = 'LIST_CASES';\n} else if (cb.startsWith('CASE_SELECT:')) {\n  route = 'SELECT_CASE';\n  selected_case_id = cb.split(':')[1] || '';\n} else if (text.startsWith('/select ')) {\n  route = 'SELECT_CASE';\n  selected_case_id = text.replace('/select', '').trim();\n} else if (text === '/status' || cb === 'CASE_STATUS') {\n  route = hasActive ? 'STATUS' : 'NO_ACTIVE_CASE';\n} else if (cb === 'CASE_LIST_DOCS') {\n  route = hasActive ? 'LIST_DOCS' : 'NO_ACTIVE_CASE';\n} else if (cb === 'CASE_DELETE_DOC') {\n  route = hasActive ? 'DELETE_DOC' : 'NO_ACTIVE_CASE';\n} else if (cb.startsWith('DOC_DELETE:')) {\n  route = hasActive ? 'CONFIRM_DELETE_DOC' : 'NO_ACTIVE_CASE';\n  selected_doc_id = cb.split(':')[1] || '';\n} else if (text === '/add_doc' || text === '/adddoc' || cb === 'CASE_ADD_DOC') {\n  route = hasActive ? 'ADD_DOC' : 'NO_ACTIVE_CASE';\n} else if (pending === 'waiting_document' && hasDocument) {\n  route = hasActive ? 'SUBMIT_ADD_DOC' : 'NO_ACTIVE_CASE';\n} else if (text === '/ask' || cb === 'CASE_ASK') {\n  route = hasActive ? 'ASK' : 'NO_ACTIVE_CASE';\n} else if (pending === 'waiting_question' && text && !text.startsWith('/')) {\n  route = hasActive ? 'SUBMIT_ASK' : 'NO_ACTIVE_CASE';\n} \n\nreturn [{\n  json: {\n    ...$json,\n    route,\n    selected_case_id,\n    selected_doc_id\n  },\n  binary: $binary\n}];"
+      },
+      "id": "0677a6ce-d9a0-4749-bb3f-3bf2960326c4",
+      "name": "Determine Route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "START",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "NEW_CASE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "SUBMIT_NEW_CASE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "LIST_CASES",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "SELECT_CASE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "STATUS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "LIST_DOCS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "DELETE_DOC",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "CONFIRM_DELETE_DOC",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "ADD_DOC",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "SUBMIT_ADD_DOC",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "ASK",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "SUBMIT_ASK",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "NO_ACTIVE_CASE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.route}}",
+                    "rightValue": "UNKNOWN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3c87f55a-0926-4978-a0f0-c86ef7c3127b",
+      "name": "Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -240,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { chat_id: $json.chat_id, message_text: 'Главное меню', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Список дел', callback_data: 'MENU_LIST_CASES' }]] }) } }];"
+      },
+      "id": "71a3081d-5d93-4eb1-9756-b7253b0ef231",
+      "name": "Prepare Start Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -1040
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "38872f7d-17a0-4f81-88b7-a9b7306b5a8b",
+      "name": "Send Start Menu",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        -1040
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = states[chatId].active_case_id || '';\nstates[chatId].pending_action = 'waiting_case_title';\ndata.states = states;\nreturn [{ json: { chat_id: $json.chat_id, message_text: 'Напиши название нового дела одним сообщением', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "733fc80e-f106-46b3-8a76-4846cd651eb9",
+      "name": "Set Waiting Case Title",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -920
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "6822413e-4471-459e-819d-acb1541628b5",
+      "name": "Ask Case Title",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        -920
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.api_base_url}}/cases",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"title\": $json.input_text} }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "bb0ee36d-83f7-4f32-8cef-38cf97406f8a",
+      "name": "API Create Case",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        -800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resp = $json;\nconst caseId = String(resp.case_id || resp.id || '');\nconst title = resp.title || $item(0).$node['Determine Route'].json.input_text || 'Без названия';\nconst status = resp.status || resp.case_status || 'EMPTY';\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = caseId;\nstates[chatId].pending_action = '';\nstates[chatId].cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst existing = states[chatId].cases.find(c => String(c.case_id || c.id || '') === caseId);\nif (existing) {\n  existing.title = title;\n  existing.status = status;\n} else {\n  states[chatId].cases.unshift({ case_id: caseId, title, status, documents_count: 0 });\n}\ndata.states = states;\nreturn [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, case_id: caseId, title, status, message_text: `Дело создано\\n\\n<b>${title}</b>\\nID: <code>${caseId}</code>\\nСтатус: ${status}`, reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],[{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],[{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],[{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "998fc318-0796-4140-ab00-7f9b28d1c1e0",
+      "name": "Save Created Case",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -800
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "8f597cd4-e7aa-49f9-931e-85930554b686",
+      "name": "Created Case Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -800
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.api_base_url}}/cases?chat_id={{$json.chat_id}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a51480b5-d22d-4d9c-a4c4-ffa5158735ba",
+      "name": "API List Cases",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        -680
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const cases = Array.isArray($json.cases) ? $json.cases : [];\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].cases = cases.map(c => ({\n  case_id: String(c.case_id || c.id || ''),\n  title: c.title || 'Без названия',\n  status: c.status || 'UNKNOWN',\n  documents_count: c.documents_count ?? null\n}));\ndata.states = states;\n\nif (!cases.length) {\n  return [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: 'У тебя пока нет дел\\n\\nНажми кнопку Создать дело', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];\n}\nconst activeCaseId = states[chatId].active_case_id || '';\nconst rows = cases.map(c => {\n  const id = String(c.case_id || c.id || '');\n  const marker = id === activeCaseId ? '• ' : '';\n  const status = c.status ? ` — ${c.status}` : '';\n  return [{ text: `${marker}${(c.title || id || 'Дело').slice(0, 45)}${status}`.slice(0, 60), callback_data: `CASE_SELECT:${id}` }];\n});\nrows.push([{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]);\nreturn [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: 'Выбери дело', reply_markup_json: JSON.stringify({ inline_keyboard: rows }) } }];"
+      },
+      "id": "975b7ae5-961c-4e0c-8cd3-2fb8141df16d",
+      "name": "Prepare Cases Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -680
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "4defc0be-054d-4bac-9ea8-a6893eda7bcc",
+      "name": "Send Cases Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -680
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$json } }];"
+      },
+      "id": "348a554c-7154-4706-8ac1-4febe954c07f",
+      "name": "API Activate Case",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst caseId = $item(0).$node['Determine Route'].json.selected_case_id || '';\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = caseId;\nstates[chatId].pending_action = '';\nconst cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selected = cases.find(c => String(c.case_id || c.id || '') === String(caseId)) || {};\ndata.states = states;\n\nconst title = selected.title || caseId || 'Без названия';\nconst status = selected.status || 'UNKNOWN';\nconst docsCount = selected.documents_count;\nlet text = `Активное дело выбрано\\n\\n<b>${title}</b>\\nID: <code>${caseId}</code>\\nСтатус: ${status}`;\nif (docsCount !== undefined && docsCount !== null) text += `\\nДокументов: ${docsCount}`;\n\nreturn [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: text, reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],[{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],[{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],[{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "8d0606ea-4884-4a53-a52c-a1217e77c6dc",
+      "name": "Save Active Case",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "bb0d3871-aab7-47c8-8bea-6d5b63013200",
+      "name": "Selected Case Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.api_base_url}}/cases/{{$json.active_case_id}}/status?chat_id={{$json.chat_id}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "c9f9a14f-6ea8-4ae2-9f6b-e78ab2ea3bd1",
+      "name": "API Case Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        -440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const status = $json.status || $json.case_status || $json.error?.code || 'UNKNOWN';\nlet text = `Статус дела\n\nID: <code>${$item(0).$node['Load State'].json.active_case_id}</code>\nСтатус: ${status}`;\nif ($json.progress !== undefined) text += `\nПрогресс: ${$json.progress}`;\nif (status === 'BUILDING') text += '\n\nИндексация еще идет';\nif (status === 'DIRTY') text += '\n\nДокументы изменились, индекс устарел';\nreturn [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: text, reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }],[{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],[{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "f9c63bd9-fdd3-4952-83fa-79caf8032be3",
+      "name": "Prepare Status Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -440
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "ca7b5b3b-6dfb-4d15-bb6e-5b2bd25ed3dc",
+      "name": "Send Status Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -440
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$json } }];"
+      },
+      "id": "c13ca637-260e-423d-8b01-4ab14c1d3821",
+      "name": "API Get Case Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst activeCaseId = String($item(0).$node['Load State'].json.active_case_id || '');\nconst cases = Array.isArray(states[chatId]?.cases) ? states[chatId].cases : [];\nconst selected = cases.find(c => String(c.case_id || c.id || '') === activeCaseId) || {};\nconst title = selected.title || activeCaseId || 'Без названия';\nconst status = selected.status || 'UNKNOWN';\nconst docsCount = selected.documents_count;\n\nlet text = `Документы дела\\n\\n<b>${title}</b>\\nID: <code>${activeCaseId}</code>\\nСтатус: ${status}`;\nif (docsCount !== undefined && docsCount !== null) text += `\\nДокументов по списку дел: ${docsCount}`;\ntext += '\\n\\nТекущий backend в GitHub пока не отдает GET /api/cases/{case_id}, поэтому точный список документов из n8n сейчас показать нельзя.\\n\\nКогда команда добавит show_case, эту ветку можно будет сразу подключить.';\n\nreturn [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: text, reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],[{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "d0b3be06-6490-4596-aa0a-0fbb4956dc48",
+      "name": "Prepare Docs Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "15c4d58e-cb82-4115-a337-e2054fcd293e",
+      "name": "Send Docs Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ...$json } }];"
+      },
+      "id": "0939e804-3261-4664-aa70-e70e0f143e4b",
+      "name": "API Get Case Details For Delete",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: 'Удаление документа пока отключено\\n\\nВ текущем GitHub нет маршрутов GET /api/cases/{case_id} и DELETE /api/cases/{case_id}/documents/{doc_id}, поэтому из n8n пока нечего безопасно удалять.', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "a627c573-9f4d-4b9c-b5a3-c78289165e80",
+      "name": "Prepare Delete Buttons",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "0d94dcd7-d0b6-487a-a773-17354a1d5316",
+      "name": "Send Delete Options",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { placeholder: true } }];"
+      },
+      "id": "f10fd2cb-b9d8-49ca-b140-4f1fe909902f",
+      "name": "API Delete Document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: 'Удаление документа пока отключено на стороне API', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "1312e375-2635-48a4-8d57-2849b337be44",
+      "name": "Prepare Delete Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "ebd896cf-8fc1-455a-88fb-c8e079071044",
+      "name": "Send Delete Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = states[chatId].active_case_id || $json.active_case_id || '';\nstates[chatId].pending_action = 'waiting_document';\ndata.states = states;\nreturn [{ json: { chat_id: $json.chat_id, message_text: 'Теперь отправь PDF, DOCX или TXT одним сообщением', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "09d9bf50-02e8-4ec4-b70d-67368c1490df",
+      "name": "Set Waiting Document",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "1956361e-c8e3-4405-a62b-8c1a35802cbe",
+      "name": "Prompt Document Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/getFile?file_id={{$json.telegram_file_id}}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "89c9ad95-f7cc-4502-a846-d669fadfb5ba",
+      "name": "Telegram Get File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $json.result || {};\nreturn [{ json: { ...$item(0).$node['Load State'].json, telegram_document_name: $item(0).$node['Determine Route'].json.telegram_document_name, telegram_mime_type: $item(0).$node['Determine Route'].json.telegram_mime_type, telegram_file_path: result.file_path || '', message_text: '' } }];"
+      },
+      "id": "3be41812-d11f-4f3c-ae7b-88aeaa768137",
+      "name": "Prepare Telegram File Path",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.telegram.org/file/bot{{$env.TELEGRAM_BOT_TOKEN}}/{{$json.telegram_file_path}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "telegram_file"
+            }
+          }
+        }
+      },
+      "id": "e3a26b0f-c1a7-46eb-bee1-01bed4bc90cb",
+      "name": "Download Telegram File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  item.binary = item.binary || {};\n  if (item.binary.telegram_file) {\n    item.binary.telegram_file.fileName = item.json.telegram_document_name || 'document.bin';\n    item.binary.telegram_file.mimeType = item.json.telegram_mime_type || item.binary.telegram_file.mimeType || 'application/octet-stream';\n  }\n  return item;\n});"
+      },
+      "id": "c5f77c5e-8d7b-401c-b355-3579e0ab2e10",
+      "name": "Attach Binary Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.api_base_url}}/cases/{{$json.active_case_id}}/documents",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "n8nBinaryFile",
+              "name": "file",
+              "inputDataFieldName": "telegram_file"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "36a8c983-76c7-48c8-b94e-7d03f80865b7",
+      "name": "HTTP Upload Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        960,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst activeCaseId = String($item(0).$node['Load State'].json.active_case_id || '');\nstates[chatId] = states[chatId] || {};\nstates[chatId].pending_action = '';\nstates[chatId].cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selected = states[chatId].cases.find(c => String(c.case_id || c.id || '') === activeCaseId);\nconst ok = !!($json.doc_id || $json.id);\nconst status = $json.case_status || $json.status || 'DIRTY';\nif (selected && ok) {\n  selected.status = status;\n  if (selected.documents_count !== null && selected.documents_count !== undefined) {\n    selected.documents_count = Number(selected.documents_count) + 1;\n  }\n}\ndata.states = states;\nconst text = ok ? `Документ загружен\\n\\n${$json.name || $item(0).$node['Prepare Telegram File Path'].json.telegram_document_name}\\nСтатус дела: ${status}` : `Не удалось загрузить документ\\n\\n${$json.error?.message || 'Проверь multipart upload в n8n и маршрут /api/cases/:case_id/documents'}`;\nreturn [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: text, reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "41871823-62a4-4eb8-9ea7-2ed608538f5b",
+      "name": "Finalize Document Upload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "5676d309-55e2-460e-9071-6853c74c5e1f",
+      "name": "Send Upload Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1440,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].pending_action = '';\ndata.states = states;\nreturn [{ json: { chat_id: $json.chat_id, message_text: 'Сценарий ask пока отключен\\n\\nВ текущем GitHub еще нет POST /api/cases/{case_id}/ask, поэтому вопрос по делу из n8n сейчас нельзя отправить честно и стабильно.', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "9016bd15-2be7-45fd-bf48-81aa024b05fb",
+      "name": "Set Waiting Question",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "17affa03-932d-46d5-83c4-110dbbb96d56",
+      "name": "Prompt Ask Question",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].pending_action = '';\ndata.states = states;\nreturn [{ json: { placeholder: true } }];"
+      },
+      "id": "85093cd0-3ec9-4700-9257-8491932f54c7",
+      "name": "API Ask",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { chat_id: $item(0).$node['Load State'].json.chat_id, message_text: 'Сценарий ask пока отключен на стороне API', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "45a70fbd-ecd7-452e-95c5-136ddf4eceff",
+      "name": "Prepare Ask Chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\"} }}",
+        "options": {}
+      },
+      "id": "6110e234-5de3-4916-9768-ccfa2da66258",
+      "name": "Send Ask Chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        480,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { chat_id: $json.chat_id, message_text: 'Сначала выбери или создай дело', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Список дел', callback_data: 'MENU_LIST_CASES' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "aad8dc3d-cbeb-4b0d-b576-a9f294ae00a5",
+      "name": "Prepare No Active Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "79ec9f2b-ddd3-4df9-828a-d2762441e121",
+      "name": "Send No Active Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { chat_id: $json.chat_id, message_text: 'Не понял команду', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
+      },
+      "id": "3a80ca82-f8bc-4770-bc15-95504f239cb4",
+      "name": "Prepare Unknown Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
+        "options": {}
+      },
+      "id": "1af10f1b-61c2-4ee2-a4c6-8512ac80d1c1",
+      "name": "Send Unknown Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        240,
+        640
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Load State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load State": {
+      "main": [
+        [
+          {
+            "node": "Determine Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine Route": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Start Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Waiting Case Title",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Create Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API List Cases",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Activate Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Case Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Get Case Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Get Case Details For Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Delete Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Waiting Document",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram Get File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Waiting Question",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API Ask",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare No Active Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Unknown Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Start Message": {
+      "main": [
+        [
+          {
+            "node": "Send Start Menu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Waiting Case Title": {
+      "main": [
+        [
+          {
+            "node": "Ask Case Title",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Create Case": {
+      "main": [
+        [
+          {
+            "node": "Save Created Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Created Case": {
+      "main": [
+        [
+          {
+            "node": "Created Case Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API List Cases": {
+      "main": [
+        [
+          {
+            "node": "Prepare Cases Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Cases Message": {
+      "main": [
+        [
+          {
+            "node": "Send Cases Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Activate Case": {
+      "main": [
+        [
+          {
+            "node": "Save Active Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Active Case": {
+      "main": [
+        [
+          {
+            "node": "Selected Case Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Case Status": {
+      "main": [
+        [
+          {
+            "node": "Prepare Status Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Status Message": {
+      "main": [
+        [
+          {
+            "node": "Send Status Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Get Case Details": {
+      "main": [
+        [
+          {
+            "node": "Prepare Docs Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Docs Message": {
+      "main": [
+        [
+          {
+            "node": "Send Docs Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Get Case Details For Delete": {
+      "main": [
+        [
+          {
+            "node": "Prepare Delete Buttons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Delete Buttons": {
+      "main": [
+        [
+          {
+            "node": "Send Delete Options",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Delete Document": {
+      "main": [
+        [
+          {
+            "node": "Prepare Delete Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Delete Result": {
+      "main": [
+        [
+          {
+            "node": "Send Delete Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Waiting Document": {
+      "main": [
+        [
+          {
+            "node": "Prompt Document Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Get File": {
+      "main": [
+        [
+          {
+            "node": "Prepare Telegram File Path",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Telegram File Path": {
+      "main": [
+        [
+          {
+            "node": "Download Telegram File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Telegram File": {
+      "main": [
+        [
+          {
+            "node": "Attach Binary Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Binary Metadata": {
+      "main": [
+        [
+          {
+            "node": "HTTP Upload Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Upload Document": {
+      "main": [
+        [
+          {
+            "node": "Finalize Document Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize Document Upload": {
+      "main": [
+        [
+          {
+            "node": "Send Upload Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Waiting Question": {
+      "main": [
+        [
+          {
+            "node": "Prompt Ask Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Ask": {
+      "main": [
+        [
+          {
+            "node": "Prepare Ask Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Ask Chunks": {
+      "main": [
+        [
+          {
+            "node": "Send Ask Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare No Active Message": {
+      "main": [
+        [
+          {
+            "node": "Send No Active Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Unknown Message": {
+      "main": [
+        [
+          {
+            "node": "Send Unknown Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c64bddf9-7c0d-4bfd-8ac8-d81e18894f2f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1212b506-b934-4746-b7dd-b91899c52cdd"
+  },
+  "id": "6c22fa56-ff66-4d2b-a27d-1e9813f46f4d",
+  "tags": []
+}
