@@ -15,7 +15,7 @@ module Api
       end
     end
 
-    # DELETE api/cases/:case_id/documents/:id?chat_id=123456789
+    # DELETE api/cases/:case_id/documents/:id
     def destroy
       @document = @case.documents.find(params[:id])
       doc_id = document_id(@document)
@@ -27,7 +27,7 @@ module Api
     private
 
     def set_case
-      @case = Case.where(chat_id: params[:chat_id]).find(parse_case_id_param(params[:case_id]))
+      @case = Case.find(parse_case_id_param(params[:case_id]))
     end
 
     def document_params
