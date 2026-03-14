@@ -9,13 +9,13 @@
         ],
         "additionalFields": {}
       },
-      "id": "84d4e78b-4d6b-4095-86e0-f0fec4f38f5c",
+      "id": "09fc59b3-c120-4042-bed5-4d80dd55ab30",
       "name": "Telegram Trigger",
       "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1.2,
       "position": [
-        13664,
-        4848
+        29856,
+        8064
       ],
       "webhookId": "legal-rag-telegram-api-max",
       "credentials": {
@@ -29,39 +29,39 @@
       "parameters": {
         "jsCode": "const msg = $json.message || {};\nconst cb = $json.callback_query || {};\nconst doc = msg?.document || null;\n\nreturn [{\n  json: {\n    chat_id: msg?.chat?.id || cb?.message?.chat?.id || null,\n    input_text: (msg?.text || '').trim(),\n    callback_data: cb?.data || '',\n    callback_id: cb?.id || '',\n    telegram_file_id: doc?.file_id || '',\n    telegram_document_name: doc?.file_name || '',\n    telegram_mime_type: doc?.mime_type || '',\n    has_document: !!doc\n  },\n  binary: $binary\n}];"
       },
-      "id": "99f13644-d9ac-464f-a201-293f01213168",
+      "id": "0d1de89e-5298-405d-9fed-afd674cdc66f",
       "name": "Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14048,
-        4736
+        30240,
+        7952
       ]
     },
     {
       "parameters": {
         "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nconst state = states[chatId] || {};\n\nreturn [{\n  json: {\n    ...$json,\n    api_base_url: $env.N8N_API_BASE_URL || 'http://host.docker.internal:8000/api',\n    rag_base_url: $env.N8N_RAG_BASE_URL || 'http://rag:8001',\n    llm_base_url: $env.N8N_LLM_BASE_URL || 'http://llm:8002',\n    rag_top_k: Number($env.N8N_RAG_TOP_K || 5),\n    active_case_id: state.active_case_id || '',\n    pending_action: state.pending_action || ''\n  },\n  binary: $binary\n}];"
       },
-      "id": "cd1be185-2fce-4c66-b52e-45e6e80643a2",
+      "id": "a3292419-9cd9-4459-b774-6d4dd6f9f535",
       "name": "Load State",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14288,
-        4736
+        30480,
+        7952
       ]
     },
     {
       "parameters": {
         "jsCode": "const text = ($json.input_text || '').trim();\nconst cb = $json.callback_data || '';\nconst pending = $json.pending_action || '';\nconst hasActive = !!$json.active_case_id;\nconst hasDocument = !!$json.has_document;\n\nlet route = 'UNKNOWN';\nlet selected_case_id = '';\nlet selected_doc_id = '';\n\nif (text === '/start' || text === '/menu' || cb === 'BACK_MAIN') {\n  route = 'START';\n} else if (text === '/new_case' || text === '/newcase' || cb === 'MENU_NEW_CASE') {\n  route = 'NEW_CASE';\n} else if (pending === 'waiting_case_title' && text && !text.startsWith('/')) {\n  route = 'SUBMIT_NEW_CASE';\n} else if (text === '/list_cases' || text === '/listcases' || cb === 'MENU_LIST_CASES' || cb === 'CASE_LIST') {\n  route = 'LIST_CASES';\n} else if (cb.startsWith('CASE_SELECT:')) {\n  route = 'SELECT_CASE';\n  selected_case_id = cb.split(':')[1] || '';\n} else if (text.startsWith('/select ')) {\n  route = 'SELECT_CASE';\n  selected_case_id = text.replace('/select', '').trim();\n} else if (text === '/status' || cb === 'CASE_STATUS') {\n  route = hasActive ? 'STATUS' : 'NO_ACTIVE_CASE';\n} else if (cb === 'CASE_LIST_DOCS') {\n  route = hasActive ? 'LIST_DOCS' : 'NO_ACTIVE_CASE';\n} else if (cb === 'CASE_DELETE_DOC') {\n  route = hasActive ? 'DELETE_DOC' : 'NO_ACTIVE_CASE';\n} else if (cb.startsWith('DOC_DELETE:')) {\n  route = hasActive ? 'CONFIRM_DELETE_DOC' : 'NO_ACTIVE_CASE';\n  selected_doc_id = cb.split(':')[1] || '';\n} else if (text === '/add_doc' || text === '/adddoc' || cb === 'CASE_ADD_DOC') {\n  route = hasActive ? 'ADD_DOC' : 'NO_ACTIVE_CASE';\n} else if (pending === 'waiting_document' && hasDocument) {\n  route = hasActive ? 'SUBMIT_ADD_DOC' : 'NO_ACTIVE_CASE';\n} else if (text === '/ask' || cb === 'CASE_ASK') {\n  route = hasActive ? 'ASK' : 'NO_ACTIVE_CASE';\n} else if (pending === 'waiting_question' && text && !text.startsWith('/')) {\n  route = hasActive ? 'SUBMIT_ASK' : 'NO_ACTIVE_CASE';\n} \n\nreturn [{\n  json: {\n    ...$json,\n    route,\n    selected_case_id,\n    selected_doc_id\n  },\n  binary: $binary\n}];"
       },
-      "id": "16cf877b-c0b2-47c7-861e-354e8a0e0b8a",
+      "id": "3cf0ac45-5489-4bd0-b0ef-442b53d8e993",
       "name": "Determine Route",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        14528,
-        4736
+        30720,
+        7952
       ]
     },
     {
@@ -372,26 +372,26 @@
         },
         "options": {}
       },
-      "id": "2c496eca-a3fe-4b37-8585-dd60e976ba2a",
+      "id": "eaeebcc2-12fc-4123-ac52-417d3991c02d",
       "name": "Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        14768,
-        4736
+        30960,
+        7952
       ]
     },
     {
       "parameters": {
         "jsCode": "return [{ json: { chat_id: $json.chat_id, message_text: 'Главное меню', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Список дел', callback_data: 'MENU_LIST_CASES' }]] }) } }];"
       },
-      "id": "d50bc48f-671e-4d95-8a97-c75eab99cf1d",
+      "id": "e271d797-210e-4b6d-be70-ab1c7d0ccaef",
       "name": "Prepare Start Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        4288
+        31200,
+        7504
       ]
     },
     {
@@ -403,26 +403,26 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "05af3b52-f77a-4698-9e37-55cd52cd8c88",
+      "id": "5d8da92e-0c02-420c-bc7b-d559a096e0e8",
       "name": "Send Start Menu",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15248,
-        4288
+        31440,
+        7504
       ]
     },
     {
       "parameters": {
         "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = states[chatId].active_case_id || '';\nstates[chatId].pending_action = 'waiting_case_title';\ndata.states = states;\nreturn [{ json: { chat_id: $json.chat_id, message_text: 'Напиши название нового дела одним сообщением', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
       },
-      "id": "5680982f-72ef-47c0-9ca4-4b0f52d2c5a2",
+      "id": "9cd42f56-0483-415e-8558-6e4ce435ba96",
       "name": "Set Waiting Case Title",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        4416
+        31200,
+        7632
       ]
     },
     {
@@ -434,13 +434,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "f347c35b-5949-4034-a5a0-554d97c9a2a9",
+      "id": "0cd5ff14-aacd-4bc7-86c3-9ba27bdb44f2",
       "name": "Ask Case Title",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15248,
-        4416
+        31440,
+        7632
       ]
     },
     {
@@ -474,26 +474,26 @@
           }
         }
       },
-      "id": "d1dad10f-becd-4bb5-9fc1-a0724a1a121c",
+      "id": "50314f09-833e-4781-8709-cd25be38347a",
       "name": "API Create Case",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        4528
+        31200,
+        7744
       ]
     },
     {
       "parameters": {
-        "jsCode": "const resp = $json || {};\nconst caseId = String(resp.id || resp.case_id || '');\nconst status = resp.status || 'pending';\nconst title = $item(0).$node['Determine Route'].json.input_text || 'Без названия';\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = caseId;\nstates[chatId].pending_action = '';\nstates[chatId].cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\n\nconst existing = states[chatId].cases.find(c => String(c.case_id || c.id || '') === caseId);\nconst localCase = {\n  case_id: caseId,\n  title,\n  status,\n  chat_id: resp.chat_id || $item(0).$node['Load State'].json.chat_id\n};\n\nif (existing) {\n  existing.title = localCase.title;\n  existing.status = localCase.status;\n  existing.chat_id = localCase.chat_id;\n} else {\n  states[chatId].cases.unshift(localCase);\n}\n\ndata.states = states;\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    case_id: caseId,\n    title,\n    status,\n    message_text: `Дело создано\\n\\n<b>${title}</b>\\nID: <code>${caseId}</code>\\nСтатус: ${status}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],\n        [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n        [{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
+        "jsCode": "const resp = $json || {};\nconst caseId = String(resp.id || resp.case_id || '');\nconst status = resp.status || 'pending';\nconst title = $item(0).$node['Determine Route'].json.input_text || 'Без названия';\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = caseId;\nstates[chatId].pending_action = '';\nstates[chatId].cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nstates[chatId].case_titles = states[chatId].case_titles || {};\n\nconst existing = states[chatId].cases.find(c => String(c.case_id || c.id || '') === caseId);\nconst localCase = {\n  case_id: caseId,\n  title,\n  status,\n  chat_id: resp.chat_id || $item(0).$node['Load State'].json.chat_id\n};\n\nstates[chatId].case_titles[caseId] = title;\n\nif (existing) {\n  existing.title = localCase.title;\n  existing.status = localCase.status;\n  existing.chat_id = localCase.chat_id;\n} else {\n  states[chatId].cases.unshift(localCase);\n}\n\ndata.states = states;\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    case_id: caseId,\n    title,\n    status,\n    message_text: `Дело создано\\n\\n<b>${title}</b>\\nID: <code>${caseId}</code>\\nСтатус: ${status}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],\n        [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n        [{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
       },
-      "id": "b12de632-639c-4868-b064-0340f7c40869",
+      "id": "0e3c8ce5-edcf-4003-ad7a-33c3b05b6e86",
       "name": "Save Created Case",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        4528
+        31440,
+        7744
       ]
     },
     {
@@ -505,13 +505,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "1efb574a-387b-4924-b3a6-792b58bc29a7",
+      "id": "c76cdc12-450f-4d8c-97a9-801346b6ca1e",
       "name": "Created Case Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        4528
+        31680,
+        7744
       ]
     },
     {
@@ -528,26 +528,26 @@
           }
         }
       },
-      "id": "ece6ce5e-59c2-46a6-84ff-0d64ccf4d877",
+      "id": "7ec94a05-8efc-492f-9c87-0767cda9db5a",
       "name": "API List Cases",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        4656
+        31200,
+        7872
       ]
     },
     {
       "parameters": {
-        "jsCode": "const payload = $json || {};\n\nlet apiCases = [];\nif (Array.isArray(payload.cases)) {\n  apiCases = payload.cases;\n} else if (Array.isArray(payload)) {\n  apiCases = payload;\n} else if (payload.case_id || payload.id) {\n  apiCases = [payload];\n}\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\n\nconst localCases = states[chatId].cases;\nconst mergedCases = apiCases.map(c => {\n  const id = String(c.case_id || c.id || '');\n  const local = localCases.find(x => String(x.case_id || x.id || '') === id) || {};\n  return {\n    case_id: id,\n    title: c.title || local.title || `Дело ${id}`,\n    status: c.status || local.status || 'UNKNOWN',\n    documents_count: Number(c.documents_count ?? local.documents_count ?? 0)\n  };\n}).filter(c => c.case_id);\n\nstates[chatId].cases = mergedCases;\ndata.states = states;\n\nif (!mergedCases.length) {\n  return [{\n    json: {\n      chat_id: $item(0).$node['Load State'].json.chat_id,\n      message_text: 'У тебя пока нет дел\\n\\nНажми кнопку Создать дело',\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nconst activeCaseId = String(states[chatId].active_case_id || '');\nconst rows = mergedCases.map(c => {\n  const marker = c.case_id === activeCaseId ? '• ' : '';\n  const suffix = c.documents_count ? ` · docs: ${c.documents_count}` : '';\n  return [{\n    text: `${marker}${c.title} — ${c.status}${suffix}`.slice(0, 60),\n    callback_data: `CASE_SELECT:${c.case_id}`\n  }];\n});\n\nrows.push([{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]);\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: 'Выбери дело',\n    reply_markup_json: JSON.stringify({ inline_keyboard: rows })\n  }\n}];"
+        "jsCode": "const payload = $json || {};\n\nlet apiCases = [];\nif (Array.isArray(payload.cases)) {\n  apiCases = payload.cases;\n} else if (Array.isArray(payload)) {\n  apiCases = payload;\n} else if (payload.case_id || payload.id) {\n  apiCases = [payload];\n}\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nstates[chatId].case_titles = states[chatId].case_titles || {};\n\nconst localCases = states[chatId].cases;\nconst caseTitles = states[chatId].case_titles || {};\n\nconst isGenericTitle = (value, id) => {\n  const title = String(value || '').trim();\n  if (!title) return true;\n  if (/^Дело\\s+\\d+$/i.test(title)) return true;\n  if (/^Case\\s+\\d+$/i.test(title)) return true;\n  if (id && title === `Дело ${String(id).replace(/^case_/, '')}`) return true;\n  return false;\n};\n\nconst mergedCases = apiCases.map(c => {\n  const id = String(c.case_id || c.id || '');\n  const local = localCases.find(x => String(x.case_id || x.id || '') === id) || {};\n  const apiTitle = String(c.title || '');\n  const localTitle = String(local.title || caseTitles[id] || '');\n\n  const chosenTitle = isGenericTitle(apiTitle, id)\n    ? (localTitle || apiTitle || `Дело ${String(id).replace(/^case_/, '')}`)\n    : apiTitle;\n\n  if (chosenTitle) {\n    caseTitles[id] = chosenTitle;\n  }\n\n  return {\n    case_id: id,\n    title: chosenTitle || `Дело ${String(id).replace(/^case_/, '')}`,\n    status: c.status || local.status || 'UNKNOWN',\n    documents_count: Number(c.documents_count ?? local.documents_count ?? 0)\n  };\n}).filter(c => c.case_id);\n\nstates[chatId].case_titles = caseTitles;\nstates[chatId].cases = mergedCases;\ndata.states = states;\n\nif (!mergedCases.length) {\n  return [{\n    json: {\n      chat_id: $item(0).$node['Load State'].json.chat_id,\n      message_text: 'У тебя пока нет дел\\n\\nНажми кнопку Создать дело',\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nconst activeCaseId = String(states[chatId].active_case_id || '');\nconst rows = mergedCases.map(c => {\n  const marker = c.case_id === activeCaseId ? '• ' : '';\n  const suffix = c.documents_count ? ` · docs: ${c.documents_count}` : '';\n  return [{\n    text: `${marker}${c.title} — ${c.status}${suffix}`.slice(0, 60),\n    callback_data: `CASE_SELECT:${c.case_id}`\n  }];\n});\n\nrows.push([{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]);\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: 'Выбери дело',\n    reply_markup_json: JSON.stringify({ inline_keyboard: rows })\n  }\n}];"
       },
-      "id": "49479a5a-b098-4e95-8f54-7bde6c0f409d",
+      "id": "7e5496ff-384e-4664-9636-21928198b745",
       "name": "Prepare Cases Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        4656
+        31440,
+        7872
       ]
     },
     {
@@ -559,39 +559,39 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "93e40927-7318-4eee-a32d-01b76f9605ad",
+      "id": "5b4c7ede-fd8f-4a29-be91-62791e32b2e1",
       "name": "Send Cases Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        4656
+        31680,
+        7872
       ]
     },
     {
       "parameters": {
         "jsCode": "return [{ json: { ...$json } }];"
       },
-      "id": "a775338d-6d7a-48ab-9db2-dcdd8a08fa78",
+      "id": "f9e06e0e-f959-4959-adf4-56068b58c486",
       "name": "API Activate Case",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        4768
+        31200,
+        7984
       ]
     },
     {
       "parameters": {
-        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst caseId = $item(0).$node['Determine Route'].json.selected_case_id || '';\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = caseId;\nstates[chatId].pending_action = '';\n\nconst cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selected = cases.find(c => String(c.case_id || c.id || '') === String(caseId)) || {};\ndata.states = states;\n\nconst title = selected.title || `Дело ${caseId}`;\nconst status = selected.status || 'UNKNOWN';\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: `Активное дело выбрано\\n\\n<b>${title}</b>\\nID: <code>${caseId}</code>\\nСтатус: ${status}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],\n        [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n        [{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
+        "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst caseId = $item(0).$node['Determine Route'].json.selected_case_id || '';\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = caseId;\nstates[chatId].pending_action = '';\nstates[chatId].case_titles = states[chatId].case_titles || {};\n\nconst cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selected = cases.find(c => String(c.case_id || c.id || '') === String(caseId)) || {};\ndata.states = states;\n\nconst title = selected.title || states[chatId].case_titles[caseId] || `Дело ${String(caseId).replace(/^case_/, '')}`;\nconst status = selected.status || 'UNKNOWN';\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: `Активное дело выбрано\\n\\n<b>${title}</b>\\nID: <code>${caseId}</code>\\nСтатус: ${status}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],\n        [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n        [{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
       },
-      "id": "4ec2da68-2a32-4812-b008-4f43a525c700",
+      "id": "4aeda3af-9c76-49cd-acd5-fc927b4d34d1",
       "name": "Save Active Case",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        4768
+        31440,
+        7984
       ]
     },
     {
@@ -603,13 +603,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "7194727a-3ff0-43f5-8a3a-1c6542458d6d",
+      "id": "4b50ee76-2aff-4b84-9b24-2b4533baf65a",
       "name": "Selected Case Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        4768
+        31680,
+        7984
       ]
     },
     {
@@ -624,26 +624,26 @@
           }
         }
       },
-      "id": "cf4d859d-b9e5-44de-afa1-994af04fdaa7",
+      "id": "6b67b43b-9139-4c28-b1e1-385a0c3a6d8d",
       "name": "API Case Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        4896
+        31200,
+        8112
       ]
     },
     {
       "parameters": {
-        "jsCode": "const status = $json.status || $json.case_status || 'UNKNOWN';\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst activeCaseId = String($item(0).$node['Load State'].json.active_case_id || '');\nconst selected = (states[chatId]?.cases || []).find(c => String(c.case_id || c.id || '') === activeCaseId) || {};\nconst title = selected.title || `Дело ${activeCaseId}`;\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: `Статус дела\\n\\n<b>${title}</b>\\nID: <code>${activeCaseId}</code>\\nСтатус: ${status}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }],\n        [{ text: 'Спросить по делу', callback_data: 'CASE_ASK' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
+        "jsCode": "const status = $json.status || $json.case_status || 'UNKNOWN';\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($item(0).$node['Load State'].json.chat_id || 'unknown');\nconst activeCaseId = String($item(0).$node['Load State'].json.active_case_id || '');\nstates[chatId] = states[chatId] || {};\nstates[chatId].case_titles = states[chatId].case_titles || {};\nconst selected = (states[chatId]?.cases || []).find(c => String(c.case_id || c.id || '') === activeCaseId) || {};\nconst title = selected.title || states[chatId].case_titles[activeCaseId] || `Дело ${String(activeCaseId).replace(/^case_/, '')}`;\n\nreturn [{\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: `Статус дела\\n\\n<b>${title}</b>\\nID: <code>${activeCaseId}</code>\\nСтатус: ${status}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }],\n        [{ text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }, { text: 'Спросить по делу', callback_data: 'CASE_ASK' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
       },
-      "id": "049be87f-a28f-489d-ad54-d2a6a19c7011",
+      "id": "799d49a3-2056-4a11-9f88-528b39a423b7",
       "name": "Prepare Status Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        4896
+        31440,
+        8112
       ]
     },
     {
@@ -655,13 +655,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "1568f941-081d-4ca8-8e16-4338e67fa1cd",
+      "id": "a647cdde-8b6f-4ee1-8cd6-1a993509851a",
       "name": "Send Status Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        4896
+        31680,
+        8112
       ]
     },
     {
@@ -676,26 +676,26 @@
           }
         }
       },
-      "id": "191dbec8-570f-4e3f-89a5-a86cb3130e8d",
+      "id": "91f33201-63d7-43a7-be3f-6a42bfafc93f",
       "name": "API Get Case Details",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        5008
+        31200,
+        8224
       ]
     },
     {
       "parameters": {
-        "jsCode": "const details = $json || {};\nconst load = $item(0).$node['Load State'].json;\nconst activeCaseId = String(load.active_case_id || details.case_id || '');\nconst title = String(details.title || `Дело ${activeCaseId}`);\nconst status = String(details.status || details.case_status || 'UNKNOWN');\nconst docs = Array.isArray(details.documents) ? details.documents : [];\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nif (Number(details.status) === 404 || details.error === 'Not Found') {\n  return [{\n    json: {\n      chat_id: load.chat_id,\n      message_text: `Не удалось загрузить документы дела\\n\\nID: ${escapeHtml(activeCaseId)}\\nОшибка API: 404 Not Found`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n          [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Список дел', callback_data: 'CASE_LIST' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nlet docsBlock = 'Документов пока нет.';\nif (docs.length) {\n  docsBlock = docs.map((doc, index) => {\n    const name = escapeHtml(doc.name || doc.filename || `Документ ${index + 1}`);\n    const docId = escapeHtml(doc.doc_id || doc.id || `doc_${index + 1}`);\n    const pages = doc.pages !== undefined && doc.pages !== null ? `, стр.: ${escapeHtml(doc.pages)}` : '';\n    return `${index + 1}. ${name}\\nID: ${docId}${pages}`;\n  }).join('\\n\\n');\n}\n\nreturn [{\n  json: {\n    chat_id: load.chat_id,\n    message_text: `Документы дела\\n\\n<b>${escapeHtml(title)}</b>\\nID: ${escapeHtml(activeCaseId)}\\nСтатус: ${escapeHtml(status)}\\n\\n${docsBlock}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n        [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Список дел', callback_data: 'CASE_LIST' }],\n        [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];\n"
+        "jsCode": "const details = $json || {};\nconst load = $item(0).$node['Load State'].json;\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String(load.chat_id || 'unknown');\nconst activeCaseId = String(load.active_case_id || details.case_id || '');\nstates[chatId] = states[chatId] || {};\nstates[chatId].case_titles = states[chatId].case_titles || {};\n\nconst localCase = (states[chatId].cases || []).find(c => String(c.case_id || c.id || '') === activeCaseId) || {};\nconst apiTitle = String(details.title || '');\nconst localTitle = String(localCase.title || states[chatId].case_titles[activeCaseId] || '');\n\nconst isGenericTitle = (value, id) => {\n  const title = String(value || '').trim();\n  if (!title) return true;\n  if (/^Дело\\s+\\d+$/i.test(title)) return true;\n  if (/^Case\\s+\\d+$/i.test(title)) return true;\n  if (id && title === `Дело ${String(id).replace(/^case_/, '')}`) return true;\n  return false;\n};\n\nconst resolvedTitle = isGenericTitle(apiTitle, activeCaseId)\n  ? (localTitle || `Дело ${String(activeCaseId).replace(/^case_/, '')}`)\n  : apiTitle;\n\nif (resolvedTitle) {\n  states[chatId].case_titles[activeCaseId] = resolvedTitle;\n  if (localCase && typeof localCase === 'object') {\n    localCase.title = resolvedTitle;\n  }\n  data.states = states;\n}\n\nconst title = String(resolvedTitle || `Дело ${String(activeCaseId).replace(/^case_/, '')}`);\nconst status = String(details.status || details.case_status || localCase.status || 'UNKNOWN');\nconst docs = Array.isArray(details.documents) ? details.documents : [];\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nif (Number(details.status) === 404 || details.error === 'Not Found') {\n  return [{\n    json: {\n      chat_id: load.chat_id,\n      message_text: `Не удалось загрузить документы дела\\n\\nID: ${escapeHtml(activeCaseId)}\\nОшибка API: 404 Not Found`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n          [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Список дел', callback_data: 'CASE_LIST' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nlet docsBlock = 'Документов пока нет.';\nif (docs.length) {\n  docsBlock = docs.map((doc, index) => {\n    const name = escapeHtml(doc.name || doc.filename || `Документ ${index + 1}`);\n    const docId = escapeHtml(doc.doc_id || doc.id || `doc_${index + 1}`);\n    const pages = doc.pages !== undefined && doc.pages !== null ? `, стр.: ${escapeHtml(doc.pages)}` : '';\n    return `${index + 1}. ${name}\\nID: ${docId}${pages}`;\n  }).join('\\n\\n');\n}\n\nreturn [{\n  json: {\n    chat_id: load.chat_id,\n    message_text: `Документы дела\\n\\n<b>${escapeHtml(title)}</b>\\nID: ${escapeHtml(activeCaseId)}\\nСтатус: ${escapeHtml(status)}\\n\\n${docsBlock}`,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }],\n        [{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Список дел', callback_data: 'CASE_LIST' }],\n        [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];\n"
       },
-      "id": "fea7c4ab-81b0-41d1-b03b-8746e65d9586",
+      "id": "04bc71a6-a0f9-4a7a-981a-921a9bfce294",
       "name": "Prepare Docs Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        5008
+        31440,
+        8224
       ]
     },
     {
@@ -707,13 +707,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "87a15adf-e429-49ce-890a-a2690968f0fd",
+      "id": "495c7132-fa41-4ae5-9549-5b7ee8285d7b",
       "name": "Send Docs Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        5008
+        31680,
+        8224
       ]
     },
     {
@@ -728,26 +728,26 @@
           }
         }
       },
-      "id": "7752f2f3-7a00-4e39-801c-917c9d5dda9e",
+      "id": "ffa55b86-2989-49ad-900f-79f3b6826e4f",
       "name": "API Get Case Details For Delete",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        5136
+        31200,
+        8352
       ]
     },
     {
       "parameters": {
-        "jsCode": "const details = $json || {};\nconst load = $item(0).$node['Load State'].json;\nconst activeCaseId = String(load.active_case_id || details.case_id || '');\nconst title = String(details.title || `Дело ${activeCaseId}`);\nconst status = String(details.status || details.case_status || 'UNKNOWN');\nconst docs = Array.isArray(details.documents) ? details.documents : [];\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nif (Number(details.status) === 404 || details.error === 'Not Found') {\n  return [{\n    json: {\n      chat_id: load.chat_id,\n      message_text: `Не удалось загрузить документы для удаления\\n\\nID: ${escapeHtml(activeCaseId)}\\nОшибка API: 404 Not Found`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nif (!docs.length) {\n  return [{\n    json: {\n      chat_id: load.chat_id,\n      message_text: `В деле пока нет документов для удаления\\n\\n<b>${escapeHtml(title)}</b>\\nID: ${escapeHtml(activeCaseId)}\\nСтатус: ${escapeHtml(status)}`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nconst buttons = docs.slice(0, 50).map((doc, index) => {\n  const docId = String(doc.doc_id || doc.id || '');\n  const name = String(doc.name || doc.filename || `Документ ${index + 1}`);\n  return [{\n    text: `Удалить: ${name}`.slice(0, 60),\n    callback_data: `DOC_DELETE:${docId}`\n  }];\n});\n\nbuttons.push([{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }]);\nbuttons.push([{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]);\n\nreturn [{\n  json: {\n    chat_id: load.chat_id,\n    message_text: `Выбери документ для удаления\\n\\n<b>${escapeHtml(title)}</b>\\nID: ${escapeHtml(activeCaseId)}\\nСтатус: ${escapeHtml(status)}`,\n    reply_markup_json: JSON.stringify({ inline_keyboard: buttons })\n  }\n}];\n"
+        "jsCode": "const details = $json || {};\nconst load = $item(0).$node['Load State'].json;\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String(load.chat_id || 'unknown');\nconst activeCaseId = String(load.active_case_id || details.case_id || '');\nstates[chatId] = states[chatId] || {};\nstates[chatId].case_titles = states[chatId].case_titles || {};\n\nconst localCase = (states[chatId].cases || []).find(c => String(c.case_id || c.id || '') === activeCaseId) || {};\nconst apiTitle = String(details.title || '');\nconst localTitle = String(localCase.title || states[chatId].case_titles[activeCaseId] || '');\n\nconst isGenericTitle = (value, id) => {\n  const title = String(value || '').trim();\n  if (!title) return true;\n  if (/^Дело\\s+\\d+$/i.test(title)) return true;\n  if (/^Case\\s+\\d+$/i.test(title)) return true;\n  if (id && title === `Дело ${String(id).replace(/^case_/, '')}`) return true;\n  return false;\n};\n\nconst resolvedTitle = isGenericTitle(apiTitle, activeCaseId)\n  ? (localTitle || `Дело ${String(activeCaseId).replace(/^case_/, '')}`)\n  : apiTitle;\n\nif (resolvedTitle) {\n  states[chatId].case_titles[activeCaseId] = resolvedTitle;\n  if (localCase && typeof localCase === 'object') {\n    localCase.title = resolvedTitle;\n  }\n  data.states = states;\n}\n\nconst title = String(resolvedTitle || `Дело ${String(activeCaseId).replace(/^case_/, '')}`);\nconst status = String(details.status || details.case_status || localCase.status || 'UNKNOWN');\nconst docs = Array.isArray(details.documents) ? details.documents : [];\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nif (Number(details.status) === 404 || details.error === 'Not Found') {\n  return [{\n    json: {\n      chat_id: load.chat_id,\n      message_text: `Не удалось загрузить документы для удаления\\n\\nID: ${escapeHtml(activeCaseId)}\\nОшибка API: 404 Not Found`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nif (!docs.length) {\n  return [{\n    json: {\n      chat_id: load.chat_id,\n      message_text: `В деле пока нет документов для удаления\\n\\n<b>${escapeHtml(title)}</b>\\nID: ${escapeHtml(activeCaseId)}\\nСтатус: ${escapeHtml(status)}`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nconst buttons = docs.slice(0, 50).map((doc, index) => {\n  const docId = String(doc.doc_id || doc.id || '');\n  const name = String(doc.name || doc.filename || `Документ ${index + 1}`);\n  return [{\n    text: `Удалить: ${name}`.slice(0, 60),\n    callback_data: `DOC_DELETE:${docId}`\n  }];\n});\n\nbuttons.push([{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }]);\nbuttons.push([{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]);\n\nreturn [{\n  json: {\n    chat_id: load.chat_id,\n    message_text: `Выбери документ для удаления\\n\\n<b>${escapeHtml(title)}</b>\\nID: ${escapeHtml(activeCaseId)}\\nСтатус: ${escapeHtml(status)}`,\n    reply_markup_json: JSON.stringify({ inline_keyboard: buttons })\n  }\n}];\n"
       },
-      "id": "88705f89-0d98-4fd9-92e9-f8bae658b1a1",
+      "id": "bb39f4e9-f8e1-49c7-8fcf-b9b9164e2208",
       "name": "Prepare Delete Buttons",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        5136
+        31440,
+        8352
       ]
     },
     {
@@ -759,19 +759,19 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "4daa239e-f0ce-478d-8729-94063c7b1b31",
+      "id": "296e9113-e939-43e8-a702-3f7d5a876b0d",
       "name": "Send Delete Options",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        5136
+        31680,
+        8352
       ]
     },
     {
       "parameters": {
         "method": "DELETE",
-        "url": "={{$json.api_base_url}}/cases/{{$json.active_case_id}}/documents/{{ String($json.selected_doc_id).replace('doc_', '') }}?chat_id={{$json.chat_id}}",
+        "url": "={{$json.api_base_url}}/cases/{{$json.active_case_id}}/documents/{{ String($json.selected_doc_id).replace('doc_', '') }}",
         "options": {
           "response": {
             "response": {
@@ -781,26 +781,26 @@
           }
         }
       },
-      "id": "65bead23-2804-46b2-ba93-add474348dfc",
+      "id": "1b57e0d3-c8aa-4b9d-ba27-1ee3484e7680",
       "name": "API Delete Document",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        5248
+        31200,
+        8464
       ]
     },
     {
       "parameters": {
-        "jsCode": "const base = $item(0).$node['Load State'].json;\nconst route = $item(0).$node['Determine Route'].json;\nconst raw = $json.data ?? (typeof $json === 'string' ? $json : JSON.stringify($json));\nlet parsed = {};\ntry { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { parsed = {}; }\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String(base.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\n\nconst selectedDocId = String(route.selected_doc_id || '');\nconst activeCaseId = String(base.active_case_id || '');\nconst cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selectedCase = cases.find(c => String(c.case_id || c.id || '') === activeCaseId);\n\nconst detailsPayload = parsed.case || parsed;\nconst title = String(detailsPayload.title || selectedCase?.title || `Дело ${activeCaseId}`);\nconst status = String(detailsPayload.status || detailsPayload.case_status || selectedCase?.status || 'DIRTY');\n\nconst ok = !String(raw).toLowerCase().includes('not found') && !String(raw).toLowerCase().includes('error') && !String(raw).toLowerCase().includes('exception');\n\nif (ok) {\n  if (selectedCase) {\n    selectedCase.status = status;\n    if (typeof selectedCase.documents_count === 'number') {\n      selectedCase.documents_count = Math.max(0, Number(selectedCase.documents_count) - 1);\n    } else {\n      selectedCase.documents_count = Math.max(0, Number(selectedCase.documents_count || 1) - 1);\n    }\n  }\n}\ndata.states = states;\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst message_text = ok\n  ? `Документ удалён\\n\\nДело: ${escapeHtml(title)}\\nID дела: ${escapeHtml(activeCaseId)}\\nID документа: ${escapeHtml(selectedDocId)}\\nСтатус дела: ${escapeHtml(status)}`\n  : `Не удалось удалить документ\\n\\nID дела: ${escapeHtml(activeCaseId)}\\nID документа: ${escapeHtml(selectedDocId)}\\n\\nОтвет API:\\n<code>${escapeHtml(String(raw).slice(0, 1000))}</code>`;\n\nreturn [{\n  json: {\n    chat_id: base.chat_id,\n    message_text,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }],\n        [{ text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];\n"
+        "jsCode": "const base = $item(0).$node['Load State'].json;\nconst route = $item(0).$node['Determine Route'].json;\nconst raw = $json.data ?? (typeof $json === 'string' ? $json : JSON.stringify($json));\nlet parsed = {};\ntry { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { parsed = {}; }\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String(base.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].case_titles = states[chatId].case_titles || {};\n\nconst selectedDocId = String(route.selected_doc_id || '');\nconst activeCaseId = String(base.active_case_id || '');\nconst cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selectedCase = cases.find(c => String(c.case_id || c.id || '') === activeCaseId);\n\nconst detailsPayload = parsed.case || parsed;\nconst title = String(detailsPayload.title || selectedCase?.title || states[chatId].case_titles[activeCaseId] || `Дело ${String(activeCaseId).replace(/^case_/, '')}`);\nconst status = String(detailsPayload.status || detailsPayload.case_status || selectedCase?.status || 'DIRTY');\n\nconst ok = !String(raw).toLowerCase().includes('not found') && !String(raw).toLowerCase().includes('error') && !String(raw).toLowerCase().includes('exception');\n\nif (ok) {\n  if (selectedCase) {\n    selectedCase.status = status;\n    if (typeof selectedCase.documents_count === 'number') {\n      selectedCase.documents_count = Math.max(0, Number(selectedCase.documents_count) - 1);\n    } else {\n      selectedCase.documents_count = Math.max(0, Number(selectedCase.documents_count || 1) - 1);\n    }\n  }\n}\ndata.states = states;\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst message_text = ok\n  ? `Документ удалён\\n\\nДело: ${escapeHtml(title)}\\nID дела: ${escapeHtml(activeCaseId)}\\nID документа: ${escapeHtml(selectedDocId)}\\nСтатус дела: ${escapeHtml(status)}`\n  : `Не удалось удалить документ\\n\\nID дела: ${escapeHtml(activeCaseId)}\\nID документа: ${escapeHtml(selectedDocId)}\\n\\nОтвет API:\\n<code>${escapeHtml(String(raw).slice(0, 1000))}</code>`;\n\nreturn [{\n  json: {\n    chat_id: base.chat_id,\n    message_text,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Добавить документ', callback_data: 'CASE_ADD_DOC' }],\n        [{ text: 'Удалить документ', callback_data: 'CASE_DELETE_DOC' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n        [{ text: 'Список дел', callback_data: 'CASE_LIST' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];\n"
       },
-      "id": "9c5e1004-2ec7-4b4c-b80d-14ccb842bfd1",
+      "id": "9597d010-5d24-43c0-bf0e-537c3c1a9e5b",
       "name": "Prepare Delete Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        5248
+        31440,
+        8464
       ]
     },
     {
@@ -812,26 +812,26 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "8433fc9f-e61a-4390-a331-3929c11bf1e1",
+      "id": "2edbdaff-2af6-45e7-a53f-f131c505301f",
       "name": "Send Delete Result",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        5248
+        31680,
+        8464
       ]
     },
     {
       "parameters": {
         "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].active_case_id = states[chatId].active_case_id || $json.active_case_id || '';\nstates[chatId].pending_action = 'waiting_document';\ndata.states = states;\nreturn [{ json: { chat_id: $json.chat_id, message_text: 'Теперь отправь PDF, DOCX или TXT одним сообщением', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
       },
-      "id": "a4f1cefa-6d09-44e4-9116-cf49f1172367",
+      "id": "bc739f68-d80e-4979-a54b-f9d7c15ace73",
       "name": "Set Waiting Document",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        5376
+        31200,
+        8592
       ]
     },
     {
@@ -843,13 +843,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "e4c46e12-c09a-4591-b38e-900be3578705",
+      "id": "ae1f5a8b-0bf3-4690-b87d-c4996685f658",
       "name": "Prompt Document Upload",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15248,
-        5376
+        31440,
+        8592
       ]
     },
     {
@@ -864,26 +864,26 @@
           }
         }
       },
-      "id": "7bdfbd93-e29a-467e-8ca4-8bda2a950184",
+      "id": "3bbb9f49-7a98-4809-b8f9-f8d00bc1935c",
       "name": "Telegram Get File",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        5488
+        31200,
+        8704
       ]
     },
     {
       "parameters": {
         "jsCode": "const result = $json.result || {};\nreturn [{ json: { ...$item(0).$node['Load State'].json, telegram_document_name: $item(0).$node['Determine Route'].json.telegram_document_name, telegram_mime_type: $item(0).$node['Determine Route'].json.telegram_mime_type, telegram_file_path: result.file_path || '', message_text: '' } }];"
       },
-      "id": "5413b8d4-e884-4ac6-9039-2414b10d4bd9",
+      "id": "73e897e2-9605-4d61-be16-9275b2aa2daf",
       "name": "Prepare Telegram File Path",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        5488
+        31440,
+        8704
       ]
     },
     {
@@ -898,26 +898,26 @@
           }
         }
       },
-      "id": "0cd0616d-50a2-4402-8fe1-2c656ac21959",
+      "id": "8a51c1bc-1420-4f62-8cfc-860c4ed626fc",
       "name": "Download Telegram File",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        5488
+        31680,
+        8704
       ]
     },
     {
       "parameters": {
         "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  item.binary = item.binary || {};\n  if (item.binary.telegram_file) {\n    item.binary.telegram_file.fileName = item.json.telegram_document_name || 'document.bin';\n    item.binary.telegram_file.mimeType = item.json.telegram_mime_type || item.binary.telegram_file.mimeType || 'application/octet-stream';\n  }\n  return item;\n});"
       },
-      "id": "3998fe4d-8dda-4054-8b36-fe8b0ce15c4d",
+      "id": "77ea1a54-662b-43a0-9288-a861a43df0df",
       "name": "Attach Binary Metadata",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15728,
-        5488
+        31920,
+        8704
       ]
     },
     {
@@ -947,26 +947,26 @@
           }
         }
       },
-      "id": "1f73726a-536d-49ad-9834-06a244e72800",
+      "id": "5fd5b52b-75d4-4cdd-a7f1-292c5a7db1c4",
       "name": "HTTP Upload Document",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15968,
-        5488
+        32160,
+        8704
       ]
     },
     {
       "parameters": {
         "jsCode": "const buildRaw = $json.data ?? (typeof $json === 'string' ? $json : JSON.stringify($json));\nconst upload = $item(0).$node['Prepare Build Request'].json;\nconst uploadOk = !!upload.upload_ok;\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst buildLooksBad = (() => {\n  const text = String(buildRaw || '').toLowerCase();\n  if (!text) return false;\n  return text.includes('\"detail\"') || text.includes('\"error\"') || text.includes('traceback') || text.includes('exception');\n})();\n\nlet text;\nif (!uploadOk) {\n  text = `Не удалось подтвердить загрузку документа\\n\\nОтвет API:\\n<code>${escapeHtml(String(upload.upload_raw || '').slice(0, 700))}</code>`;\n} else {\n  const buildNote = buildLooksBad\n    ? '\\n\\nДокумент сохранён, но пересборка индекса вернула нестандартный ответ. Проверь RAG сервис.'\n    : '\\n\\nПересборка индекса запущена.';\n  text = `Документ загружен\\n\\nФайл: ${escapeHtml(upload.file_name)}\\nДело: ${escapeHtml(upload.active_case_id)}\\nID документа: ${escapeHtml(upload.upload_doc_id || 'неизвестно')}${buildNote}`;\n}\n\nreturn [{\n  json: {\n    chat_id: upload.chat_id,\n    message_text: text,\n    reply_markup_json: JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n        [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    })\n  }\n}];"
       },
-      "id": "89d30d1c-cebf-4979-b8cd-69c57bfc291f",
+      "id": "14f16587-7e06-4cf2-95a4-1ef0bb021b09",
       "name": "Finalize Document Upload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        16208,
-        5488
+        32400,
+        8704
       ]
     },
     {
@@ -992,26 +992,26 @@
         },
         "options": {}
       },
-      "id": "101a2e00-aec2-4978-8952-75a02694a5c3",
+      "id": "9b87b8ef-05fd-4346-aed1-b2b30afad56c",
       "name": "Send Upload Result",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        16448,
-        5488
+        32640,
+        8704
       ]
     },
     {
       "parameters": {
         "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst chatId = String($json.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].pending_action = 'waiting_question';\ndata.states = states;\nreturn [{ json: { chat_id: $json.chat_id, message_text: 'Напиши вопрос по делу одним сообщением', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Статус дела', callback_data: 'CASE_STATUS' }, { text: 'Документы', callback_data: 'CASE_LIST_DOCS' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
       },
-      "id": "9672f1b8-621e-43ea-993f-6da3d2da73cc",
+      "id": "ff00ed50-f66f-49ce-a538-d5dcf4f91e9b",
       "name": "Set Waiting Question",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        5616
+        31200,
+        8832
       ]
     },
     {
@@ -1023,13 +1023,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "14c2b323-dfa1-4938-99f7-ec61421e4c9a",
+      "id": "c9e78835-f920-44ec-97bd-9ce40590c730",
       "name": "Prompt Ask Question",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15248,
-        5616
+        31440,
+        8832
       ]
     },
     {
@@ -1048,26 +1048,26 @@
           }
         }
       },
-      "id": "c55278d8-6cdf-40af-9108-15f0002335fc",
+      "id": "a32c7560-2925-4d0f-a8c4-cf35036317b4",
       "name": "RAG Retrieve",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15008,
-        5728
+        31200,
+        8944
       ]
     },
     {
       "parameters": {
         "jsCode": "const raw = $json.data ?? (typeof $json === 'string' ? $json : JSON.stringify($json));\nlet parsed = {};\ntry { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { parsed = {}; }\n\nconst retrieve = $item(0).$node['Prepare Generate Request'].json;\nconst chunksCount = Number(retrieve.chunks_count || 0);\nconst retrieveRaw = String(retrieve.retrieve_raw || '');\n\nconst escapeHtml = (value) => String(value || '')\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;');\n\nconst answer = String(parsed.answer || '').trim();\nif (!answer) {\n  const reason = chunksCount === 0\n    ? 'Не удалось найти релевантные фрагменты по делу'\n    : 'Не удалось получить ответ по делу';\n\n  const debugSource = chunksCount === 0 ? retrieveRaw : String(raw);\n  return [{\n    json: {\n      chat_id: $item(0).$node['Load State'].json.chat_id,\n      message_text: `${reason}\\n\\nОтвет сервиса:\\n<code>${escapeHtml(debugSource.slice(0, 1000))}</code>`,\n      reply_markup_json: JSON.stringify({\n        inline_keyboard: [\n          [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n          [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n        ]\n      })\n    }\n  }];\n}\n\nconst sources = Array.isArray(parsed.sources) ? parsed.sources : [];\nconst lines = [];\nlines.push('<b>Ответ по делу</b>');\nlines.push('');\nfor (const part of answer.split(/\\n+/)) {\n  lines.push(escapeHtml(part));\n}\nif (sources.length) {\n  lines.push('');\n  lines.push('<b>Источники</b>');\n  for (const [i, src] of sources.slice(0, 10).entries()) {\n    const name = escapeHtml(src.name || src.source || src.doc_name || src.doc_id || `Источник ${i + 1}`);\n    const page = src.page !== undefined && src.page !== null ? `, стр. ${escapeHtml(src.page)}` : '';\n    lines.push(`• ${name}${page}`);\n  }\n}\nif (parsed.meta && Object.keys(parsed.meta).length) {\n  lines.push('');\n  lines.push(`<code>meta: ${escapeHtml(JSON.stringify(parsed.meta).slice(0, 500))}</code>`);\n}\n\nconst blocks = [];\nlet current = '';\nconst limit = 3500;\n\nconst pushCurrent = () => {\n  const trimmed = current.trim();\n  if (trimmed) blocks.push(trimmed);\n  current = '';\n};\n\nfor (const line of lines) {\n  const candidate = current ? `${current}\\n${line}` : line;\n  if (candidate.length <= limit) {\n    current = candidate;\n    continue;\n  }\n  if (current) pushCurrent();\n\n  if (line.length <= limit) {\n    current = line;\n    continue;\n  }\n\n  let remaining = line;\n  while (remaining.length > limit) {\n    let cut = remaining.lastIndexOf(' ', limit);\n    if (cut < Math.floor(limit * 0.6)) cut = limit;\n    blocks.push(remaining.slice(0, cut).trim());\n    remaining = remaining.slice(cut).trim();\n  }\n  current = remaining;\n}\npushCurrent();\n\nreturn blocks.map((chunk, index) => ({\n  json: {\n    chat_id: $item(0).$node['Load State'].json.chat_id,\n    message_text: chunk,\n    reply_markup_json: index === blocks.length - 1 ? JSON.stringify({\n      inline_keyboard: [\n        [{ text: 'Документы', callback_data: 'CASE_LIST_DOCS' }, { text: 'Статус дела', callback_data: 'CASE_STATUS' }],\n        [{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]\n      ]\n    }) : ''\n  }\n}));"
       },
-      "id": "bc4f9410-4554-46cb-bafb-00260daf7529",
+      "id": "8183a082-1e80-4c9c-8b8b-eef777654758",
       "name": "Prepare Ask Chunks",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15248,
-        5728
+        31440,
+        8944
       ]
     },
     {
@@ -1079,26 +1079,26 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\"} }}",
         "options": {}
       },
-      "id": "ee05d265-83a1-42b3-9f92-4e29dd53b451",
+      "id": "cccf0f6a-61c5-4502-a320-69795ea1e04a",
       "name": "Send Ask Chunks",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15488,
-        5728
+        31680,
+        8944
       ]
     },
     {
       "parameters": {
         "jsCode": "return [{ json: { chat_id: $json.chat_id, message_text: 'Сначала выбери или создай дело', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Создать дело', callback_data: 'MENU_NEW_CASE' }, { text: 'Список дел', callback_data: 'MENU_LIST_CASES' }],[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
       },
-      "id": "45423e88-2d71-4687-83e6-750e3e3bfc6b",
+      "id": "fa5b5d5f-6aa0-496d-81d0-cd3f3a77a863",
       "name": "Prepare No Active Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        5856
+        31200,
+        9072
       ]
     },
     {
@@ -1110,26 +1110,26 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "8c62f35d-e945-4b0a-9da7-3b18a329e4e0",
+      "id": "9ef472e6-6c21-40f2-92f9-dbf31bb04fc9",
       "name": "Send No Active Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15248,
-        5856
+        31440,
+        9072
       ]
     },
     {
       "parameters": {
         "jsCode": "return [{ json: { chat_id: $json.chat_id, message_text: 'Не понял команду', reply_markup_json: JSON.stringify({ inline_keyboard: [[{ text: 'Главное меню', callback_data: 'BACK_MAIN' }]] }) } }];"
       },
-      "id": "979a64b9-6ea9-4ec2-8c81-06e16ab8ef06",
+      "id": "5f3688a8-387b-40f6-8db1-816dfb6b9fe0",
       "name": "Prepare Unknown Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        15008,
-        5968
+        31200,
+        9184
       ]
     },
     {
@@ -1141,13 +1141,13 @@
         "jsonBody": "={{ {\"chat_id\": $json.chat_id, \"text\": $json.message_text, \"parse_mode\": \"HTML\", \"reply_markup\": JSON.parse($json.reply_markup_json)} }}",
         "options": {}
       },
-      "id": "cfef52d0-04bb-4ee3-9487-48e312869dc5",
+      "id": "3ce251e7-a0ea-422d-925f-60b2b9ac2945",
       "name": "Send Unknown Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        15248,
-        5968
+        31440,
+        9184
       ]
     },
     {
@@ -1157,23 +1157,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        13920,
-        5152
+        30112,
+        8368
       ],
-      "id": "c9051fee-98b6-43bf-806a-203edf300233",
+      "id": "53cfb9a3-9df1-4a18-bda3-5ad7189cf7ce",
       "name": "Code in JavaScript"
     },
     {
       "parameters": {
         "jsCode": "const data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst base = $item(0).$node['Load State'].json;\nconst chatId = String(base.chat_id || 'unknown');\nconst activeCaseId = String(base.active_case_id || '');\nconst externalCaseId = activeCaseId.startsWith('case_') ? activeCaseId : `case_${activeCaseId}`;\n\nstates[chatId] = states[chatId] || {};\nstates[chatId].pending_action = '';\n\nconst raw = $json.data ?? (typeof $json === 'string' ? $json : JSON.stringify($json));\nlet parsed = {};\ntry { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { parsed = {}; }\n\nconst ok = !!parsed.ok;\nconst fileName = $item(0).$node['Prepare Telegram File Path'].json.telegram_document_name || 'document';\n\nconst docs = Array.isArray(states[chatId].documents) ? states[chatId].documents : [];\nif (ok) {\n  docs.push({\n    doc_id: String(parsed.doc_id || '').replace(/^doc_/, ''),\n    display_doc_id: String(parsed.doc_id || ''),\n    name: fileName\n  });\n}\nstates[chatId].documents = docs;\n\nconst cases = Array.isArray(states[chatId].cases) ? states[chatId].cases : [];\nconst selectedCase = cases.find(c => String(c.case_id || c.id || '').replace(/^case_/, '') === activeCaseId);\nif (selectedCase && ok) {\n  selectedCase.status = parsed.case_status || 'DIRTY';\n  selectedCase.documents_count = docs.length;\n}\ndata.states = states;\n\nconst buildDocs = docs\n  .map(doc => String(doc.display_doc_id || doc.doc_id || doc.name || '').trim())\n  .filter(Boolean);\n\nreturn [{\n  json: {\n    chat_id: base.chat_id,\n    active_case_id: activeCaseId,\n    external_case_id: externalCaseId,\n    rag_base_url: base.rag_base_url,\n    upload_ok: ok,\n    upload_raw: raw,\n    upload_doc_id: parsed.doc_id || '',\n    file_name: fileName,\n    build_docs: buildDocs\n  }\n}];"
       },
-      "id": "a821b774-aefa-4159-bccc-3601856cd498",
+      "id": "593411f4-9232-4a17-acab-8b176d801a62",
       "name": "Prepare Build Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        20976,
-        7072
+        37168,
+        10288
       ]
     },
     {
@@ -1192,26 +1192,26 @@
           }
         }
       },
-      "id": "7a952131-44ad-4be5-b580-472f9ce2891e",
+      "id": "605b1941-08cf-4439-a991-f4a1caea9f65",
       "name": "RAG Build",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        21216,
-        7072
+        37408,
+        10288
       ]
     },
     {
       "parameters": {
         "jsCode": "const raw = $json.data ?? (typeof $json === 'string' ? $json : JSON.stringify($json));\nlet parsed = {};\ntry { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (e) { parsed = {}; }\n\nlet chunks = [];\nif (Array.isArray(parsed)) {\n  chunks = parsed;\n} else if (Array.isArray(parsed.chunks)) {\n  chunks = parsed.chunks;\n} else if (Array.isArray(parsed.results)) {\n  chunks = parsed.results;\n} else if (Array.isArray(parsed.data?.chunks)) {\n  chunks = parsed.data.chunks;\n}\n\nchunks = chunks.map((chunk, index) => {\n  if (typeof chunk === 'string') {\n    return {\n      text: chunk,\n      source: '',\n      page: null,\n      chunk_id: `chunk_${index + 1}`,\n      score: null\n    };\n  }\n  return {\n    text: String(chunk.text || chunk.content || ''),\n    source: String(chunk.source || chunk.doc_name || chunk.doc_id || ''),\n    page: chunk.page ?? null,\n    chunk_id: String(chunk.chunk_id || chunk.id || `chunk_${index + 1}`),\n    score: chunk.score ?? null\n  };\n}).filter(chunk => chunk.text);\n\nconst data = $getWorkflowStaticData('global');\nconst states = data.states || {};\nconst base = $item(0).$node['Load State'].json;\nconst chatId = String(base.chat_id || 'unknown');\nstates[chatId] = states[chatId] || {};\nstates[chatId].pending_action = '';\ndata.states = states;\n\nconst activeCaseId = String(base.active_case_id || '');\nconst externalCaseId = activeCaseId.startsWith('case_') ? activeCaseId : `case_${activeCaseId}`;\n\nreturn [{\n  json: {\n    chat_id: base.chat_id,\n    active_case_id: activeCaseId,\n    external_case_id: externalCaseId,\n    llm_base_url: base.llm_base_url,\n    query: $item(0).$node['Determine Route'].json.input_text || '',\n    chunks,\n    retrieve_raw: raw,\n    chunks_count: chunks.length\n  }\n}];"
       },
-      "id": "ecc0231c-94cf-4818-b73c-64593af73e1a",
+      "id": "7a3a5ca2-ae9d-4346-9d80-664c8457ee23",
       "name": "Prepare Generate Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        20080,
-        7376
+        36272,
+        10592
       ]
     },
     {
@@ -1230,13 +1230,13 @@
           }
         }
       },
-      "id": "351743a1-f2f8-4b9c-9cba-4eb14d806140",
+      "id": "dc3f0b68-01f9-426b-9d8f-f45b89329d0c",
       "name": "LLM Generate",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        20320,
-        7376
+        36512,
+        10592
       ]
     }
   ],
@@ -1754,7 +1754,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "32378c8d-14ae-44ac-bab4-ce27e0b37c51",
+  "versionId": "ec6168d4-bd2c-4256-a94d-a57a6c104880",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "0c884787ae6f17970fa97f85d90de865b1c74a657c57735d93d82e0007cf9cd0"
