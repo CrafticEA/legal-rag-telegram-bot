@@ -5,6 +5,9 @@ Rails.application.routes.draw do
       resources :documents, only: [:create, :destroy]
       get :status, on: :member
       post :ask, on: :member
+      post :upload_index, on: :member
+      get :faiss_index, on: :member
+      get :chunks, on: :member
     end
   end
 end
