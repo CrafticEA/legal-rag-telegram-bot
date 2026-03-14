@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_13_000000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_14_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -21,6 +21,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_13_000000) do
     t.datetime "updated_at", null: false
     t.string "title"
     t.integer "progress", default: 0, null: false
+    t.text "faiss_index_data"
+    t.text "chunks_data"
   end
 
   create_table "documents", force: :cascade do |t|
