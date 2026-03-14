@@ -2,6 +2,7 @@
 
 module Api
   class DocumentsController < ApplicationController
+    include ParseCaseId
     before_action :set_case
 
     # POST api/cases/:case_id/documents (multipart/form-data, field: file)
@@ -26,7 +27,7 @@ module Api
     private
 
     def set_case
-      @case = Case.where(chat_id: params[:chat_id]).find(params[:case_id])
+      @case = Case.where(chat_id: params[:chat_id]).find(parse_case_id_param(params[:case_id]))
     end
 
     def document_params
