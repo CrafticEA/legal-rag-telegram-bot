@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from typing import Any
+
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from app.indexer import build_index
 from app.retriever import retrieve
+from app.documents import DocumentResolutionError
 
 app = FastAPI(title="RAG Service", version="0.1")
 
@@ -10,7 +13,7 @@ app = FastAPI(title="RAG Service", version="0.1")
 class BuildRequest(BaseModel):
     chat_id: str
     case_id: str
-    docs: list[str]
+    docs: list[Any]
 
 
 class RetrieveRequest(BaseModel):
@@ -22,7 +25,13 @@ class RetrieveRequest(BaseModel):
 
 @app.post("/build")
 def build(req: BuildRequest):
-    stats = build_index(req.chat_id, req.case_id, req.docs)
+    try:
+        stats = build_index(req.chat_id, req.case_id, req.docs)
+    except DocumentResolutionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     return {"status": "READY", "stats": stats}
 
 

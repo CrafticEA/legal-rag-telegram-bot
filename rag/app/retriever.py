@@ -25,7 +25,7 @@ def retrieve(chat_id, case_id, query, top_k=6, retrieve_k=30):
 
         candidates.append({
             "text": chunk["text"],
-            "source": chunk["doc_name"],
+            "source": chunk.get("doc_id") or chunk["doc_name"],
             "page": chunk["page"],
             "chunk_id": chunk["chunk_id"],
             "score": float(score)

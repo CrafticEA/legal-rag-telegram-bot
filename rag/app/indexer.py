@@ -5,6 +5,7 @@ import faiss
 import numpy as np
 
 from app.chunker import chunk_text
+from app.documents import resolve_documents
 from app.embedder import embed_texts
 from app.parser import parse_document
 from app.storage import get_case_path, invalidate_case_cache
@@ -14,25 +15,31 @@ def build_index(chat_id, case_id, docs):
     case_path = get_case_path(chat_id, case_id)
     os.makedirs(case_path, exist_ok=True)
 
+    resolved_docs = resolve_documents(docs)
+
     chunks = []
     texts = []
 
     chunk_id = 0
 
-    for path in docs:
-        filename = os.path.basename(path)
-        pages = parse_document(path)
+    for doc in resolved_docs:
+        pages = parse_document(doc.path)
+        filename = doc.name
 
         for page in pages:
             pieces = chunk_text(page["text"])
 
             for piece in pieces:
-                chunks.append({
+                chunk = {
                     "chunk_id": f"c{chunk_id}",
                     "text": piece,
                     "doc_name": filename,
                     "page": page["page"]
-                })
+                }
+                if doc.doc_id:
+                    chunk["doc_id"] = doc.doc_id
+
+                chunks.append(chunk)
                 texts.append(piece)
                 chunk_id += 1
 
