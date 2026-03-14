@@ -29,7 +29,11 @@ def build(req: BuildRequest):
 @app.post("/retrieve")
 def search(req: RetrieveRequest):
     results = retrieve(req.chat_id, req.case_id, req.query, req.top_k)
-    return {"chunks": results}
+    return {
+        "case_id": req.case_id,
+        "query": req.query,
+        "chunks": results
+    }
 
 
 @app.get("/health")
