@@ -37,16 +37,28 @@ class ResolvedDocument:
     doc_id: Optional[str] = None
 
 
-def resolve_documents(doc_refs: Sequence[Any]) -> List[ResolvedDocument]:
+def resolve_documents(
+    doc_refs: Sequence[Any],
+    chat_id: Optional[Any] = None,
+    case_id: Optional[Any] = None
+) -> List[ResolvedDocument]:
     resolver = DocumentResolver()
-    return resolver.resolve(doc_refs)
+    return resolver.resolve(doc_refs, chat_id=chat_id, case_id=case_id)
 
 
 class DocumentResolver:
-    def resolve(self, doc_refs: Sequence[Any]) -> List[ResolvedDocument]:
+    def resolve(
+        self,
+        doc_refs: Sequence[Any],
+        chat_id: Optional[Any] = None,
+        case_id: Optional[Any] = None
+    ) -> List[ResolvedDocument]:
         refs = list(doc_refs or [])
         if not refs:
             raise DocumentResolutionError("Список документов пуст.")
+
+        expected_chat_id = str(chat_id) if chat_id is not None else None
+        expected_case_id = self._normalize_case_id(case_id)
 
         resolved: List[Optional[ResolvedDocument]] = [None] * len(refs)
         pending: List[Tuple[int, int]] = []
@@ -74,7 +86,9 @@ class DocumentResolver:
                 raise DocumentResolutionError(f"Документы не найдены в базе данных: {labels}.")
 
             for idx, doc_id in pending:
-                resolved[idx] = self._entry_from_row(rows[doc_id])
+                row = rows[doc_id]
+                self._validate_row(row, expected_chat_id, expected_case_id)
+                resolved[idx] = self._entry_from_row(row)
 
         return [entry for entry in resolved if entry]
 
@@ -163,6 +177,36 @@ class DocumentResolver:
 
         return unique
 
+    def _normalize_case_id(self, case_id: Optional[Any]) -> Optional[int]:
+        if case_id is None:
+            return None
+        value = str(case_id).strip()
+        if not value:
+            return None
+        if value.lower().startswith("case_"):
+            value = value.split("_", 1)[1]
+        return int(value) if value.isdigit() else None
+
+    def _validate_row(
+        self,
+        row: Dict[str, Any],
+        expected_chat_id: Optional[str],
+        expected_case_id: Optional[int]
+    ) -> None:
+        if expected_case_id is not None:
+            row_case_id = int(row.get("case_id"))
+            if row_case_id != expected_case_id:
+                raise DocumentResolutionError(
+                    f"doc_{row['id']} относится к другому делу (ожидалось case_{expected_case_id})."
+                )
+
+        if expected_chat_id is not None:
+            row_chat_id = row.get("chat_id")
+            if row_chat_id is None or str(row_chat_id) != expected_chat_id:
+                raise DocumentResolutionError(
+                    f"doc_{row['id']} не принадлежит чату {expected_chat_id}."
+                )
+
     def _fetch_documents(self, doc_ids: List[int]) -> Dict[int, Dict[str, Any]]:
         if not doc_ids:
             return {}
@@ -171,7 +215,15 @@ class DocumentResolver:
             with self._connect() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "SELECT id, case_id, file_data FROM documents WHERE id = ANY(%s)",
+                        """
+                        SELECT documents.id,
+                               documents.case_id,
+                               documents.file_data,
+                               cases.chat_id
+                        FROM documents
+                        JOIN cases ON cases.id = documents.case_id
+                        WHERE documents.id = ANY(%s)
+                        """,
                         (doc_ids,)
                     )
                     rows = cur.fetchall()

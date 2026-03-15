@@ -15,7 +15,7 @@ def build_index(chat_id, case_id, docs):
     case_path = get_case_path(chat_id, case_id)
     os.makedirs(case_path, exist_ok=True)
 
-    resolved_docs = resolve_documents(docs)
+    resolved_docs = resolve_documents(docs, chat_id=chat_id, case_id=case_id)
 
     chunks = []
     texts = []
