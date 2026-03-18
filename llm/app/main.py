@@ -37,6 +37,30 @@ def _collect_sources(chunks) -> list[SourceItem]:
             )
     return list(unique.values())
 
+def detect_user_intent(query: str) -> dict:
+    q = query.lower()
+
+    advisory_markers = [
+        "что делать",
+        "что делать дальше",
+        "как поступить",
+        "какие действия",
+        "рекомендации",
+        "посоветуй",
+        "риски",
+        "оценка",
+        "как лучше",
+        "стоит ли"
+    ]
+
+    is_advisory = any(marker in q for marker in advisory_markers)
+
+    return {
+        "answer_only_from_context": not is_advisory,
+        "allow_recommendations": is_advisory,
+        "cite_sources": True,
+        "structured_output": True,
+    }
 
 @app.get("/status")
 def status() -> dict:
@@ -63,11 +87,7 @@ def generate(req: SimpleGenerateRequest) -> GenerateResponse:
     if not req.chunks:
         raise HTTPException(status_code=400, detail="chunks are empty")
 
-    instructions = {
-        "answer_only_from_context": True,
-        "cite_sources": True,
-        "structured_output": True,
-    }
+    instructions = detect_user_intent(req.query)
 
     generation = {
         "temperature": 0.1,

@@ -29,15 +29,25 @@ def build_generate_system_prompt(instructions: dict) -> str:
     answer_only_from_context = instructions.get("answer_only_from_context", True)
     cite_sources = instructions.get("cite_sources", True)
     structured_output = instructions.get("structured_output", True)
+    allow_recommendations = instructions.get("allow_recommendations", False)
 
     rules = [
         "Ты помощник по анализу юридических документов.",
         "Отвечай на русском языке.",
+        "Не придумывай факты о деле, которых нет в предоставленном контексте.",
     ]
 
     if answer_only_from_context:
         rules.append(
-            "Используй только предоставленный контекст. Если данных недостаточно, прямо скажи об этом."
+            "Все фактические сведения о деле, сторонах, датах, суммах, документах и событиях бери только из предоставленного контекста."
+        )
+
+    if allow_recommendations:
+        rules.append(
+            "Если пользователь просит рекомендации или анализ, ты можешь предлагать возможные дальнейшие действия на основе контекста и общих соображений."
+        )
+        rules.append(
+            "Четко отделяй факты из документов от рекомендаций."
         )
 
     if cite_sources:
@@ -47,10 +57,12 @@ def build_generate_system_prompt(instructions: dict) -> str:
 
     if structured_output:
         rules.append(
-            "Структурируй ответ: сначала краткий вывод, затем детали."
+            "Структурируй ответ так: сначала краткий вывод, затем факты из документов, затем рекомендации или возможные дальнейшие действия."
         )
 
-    rules.append("Не придумывай факты, которых нет в контексте.")
+    rules.append(
+        "Не выдавай рекомендации как установленный факт. Если даешь общий совет, помечай это как рекомендацию, а не как содержание документов."
+    )
 
     return "\n".join(f"- {rule}" for rule in rules)
 
