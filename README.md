@@ -1,5 +1,3 @@
-# legal-rag-telegram-bot
-
 <table>
   <tr>
     <td width="72">
